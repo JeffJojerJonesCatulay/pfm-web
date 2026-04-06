@@ -82,9 +82,10 @@ const transactions = [
 interface DashboardProps {
   onLogout: () => void;
   onNavigateToAllocations: () => void;
+  onNavigateToWantList: () => void;
 }
 
-export default function Dashboard({ onLogout, onNavigateToAllocations }: DashboardProps) {
+export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList }: DashboardProps) {
   const [username, setUsername] = useState('User');
 
   useEffect(() => {
@@ -157,7 +158,10 @@ export default function Dashboard({ onLogout, onNavigateToAllocations }: Dashboa
                 key={index} 
                 className="action-card"
                 style={{ animationDelay: `${index * 60}ms` }}
-                onClick={t.name === 'Allocation' ? onNavigateToAllocations : undefined}
+                onClick={
+                  t.name === 'Allocation' ? onNavigateToAllocations : 
+                  t.name === 'Want Lists' ? onNavigateToWantList : undefined
+                }
               >
                 <div className="icon-wrapper">
                   {t.icon}

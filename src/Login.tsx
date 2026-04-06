@@ -33,9 +33,20 @@ export default function Login({ onLogin }: LoginProps) {
         })
       });
       
-      if (response.status === 200) {
+      if (response.ok) {
+        const text = await response.text();
+        let token = '';
+        try {
+          const parsed = JSON.parse(text);
+          token = parsed.data?.token || parsed.token || parsed.accessToken || parsed.jwt || text;
+        } catch (e) {
+          token = text;
+        }
+        
         localStorage.setItem('pfm_username', loginUsername);
         localStorage.setItem('pfm_password', loginPassword);
+        localStorage.setItem('pfm_token', token);
+        localStorage.setItem('pfm_token_time', Date.now().toString());
         onLogin();
       } else {
         alert('Login failed. Please check your credentials.');

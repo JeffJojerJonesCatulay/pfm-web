@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import Dashboard from './Dashboard';
 import Login from './Login';
 import Allocations from './Allocations';
+import WantList from './WantList';
 import './App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist'>('dashboard');
 
   useEffect(() => {
     const storedUsername = localStorage.getItem('pfm_username');
@@ -20,10 +21,13 @@ function App() {
       {isLoggedIn ? (
         currentView === 'allocations' ? (
           <Allocations onBack={() => setCurrentView('dashboard')} />
+        ) : currentView === 'wantlist' ? (
+          <WantList onBack={() => setCurrentView('dashboard')} />
         ) : (
           <Dashboard 
             onLogout={() => setIsLoggedIn(false)} 
             onNavigateToAllocations={() => setCurrentView('allocations')}
+            onNavigateToWantList={() => setCurrentView('wantlist')}
           />
         )
       ) : (

@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import './App.css';
 
-interface AllocationItem {
-  allocId?: number;
-  allocation?: string;
-  type?: string;
-  description?: string;
+interface WantListItem {
+  id?: number;
+  item?: string;
+  afford?: string;
+  dateWanted?: string;
+  estimatedPrice?: number;
+  remarks?: string;
   status?: string;
   dateAdded?: string;
   addedBy?: string;
@@ -39,8 +41,8 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function Allocations({ onBack }: AllocationsProps) {
-  const [allocations, setAllocations] = useState<AllocationItem[]>([]);
+export default function WantList({ onBack }: AllocationsProps) {
+  const [items, setItems] = useState<WantListItem[]>([]);
   const [page, setPage] = useState(0);
   const [isLastPage, setIsLastPage] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -50,14 +52,16 @@ export default function Allocations({ onBack }: AllocationsProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
-  const [selectedAllocation, setSelectedAllocation] = useState<AllocationItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<WantListItem | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newAlloc, setNewAlloc] = useState({
-    allocation: '',
-    type: 'Savings',
-    description: '',
-    status: 'Active'
+  const [newItem, setNewItem] = useState({
+    item: '',
+    afford: 'Save monthly',
+    dateWanted: '',
+    estimatedPrice: '0',
+    remarks: '',
+    status: 'Planned'
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -65,20 +69,20 @@ export default function Allocations({ onBack }: AllocationsProps) {
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
   
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<{allocation?: string, type?: string, status?: string}>({});
-  const [tempFilters, setTempFilters] = useState({ allocation: '', type: '', status: '' });
+  const [searchFilters, setSearchFilters] = useState<{item?: string, afford?: string, remarks?: string, status?: string}>({});
+  const [tempFilters, setTempFilters] = useState({ item: '', afford: '', remarks: '', status: '' });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editAlloc, setEditAlloc] = useState<Partial<AllocationItem>>({});
+  const [editItem, setEditItem] = useState<Partial<WantListItem>>({});
 
   const sanitizeInput = (val: string) => {
     return val.replace(/(--|\/|\\|;|%|\$|\*|!|`|~)/g, '');
   };
 
-  const isFormValid = newAlloc.allocation.trim() !== '' && 
-                      newAlloc.type.trim() !== '' && 
-                      newAlloc.description.trim() !== '' && 
-                      newAlloc.status.trim() !== '';
+  const isFormValid = newItem.item.trim() !== '' && 
+                       newItem.afford.trim() !== '' && 
+                       newItem.dateWanted.trim() !== '' && 
+                       newItem.status.trim() !== '';
 
   useEffect(() => {
     fetchData(0, false, searchFilters);
@@ -122,10 +126,10 @@ export default function Allocations({ onBack }: AllocationsProps) {
       setSessionToken(token);
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=${pageNumber}&size=10&sortBy=allocId`;
+      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/wantlist?page=${pageNumber}&size=10&sortBy=id`;
       
       if (Object.keys(currentFilters).length > 0) {
-        apiUrl = `${import.meta.env.PFM_BASE_URL}search/allocation.mapping?page=${pageNumber}&size=10&sortBy=allocId`;
+        apiUrl = `${import.meta.env.PFM_BASE_URL}search/wantlist?page=${pageNumber}&size=10&sortBy=id`;
         
         const stringParams: string[] = [];
         Object.entries(currentFilters).forEach(([key, val]) => {
@@ -138,15 +142,15 @@ export default function Allocations({ onBack }: AllocationsProps) {
         apiUrl += `&${stringParams.join('&')}`;
       }
 
-      const allocRes = await fetch(apiUrl, {
+      const wantRes = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      if (allocRes.ok) {
-        const responseJson = await allocRes.json();
+      if (wantRes.ok) {
+        const responseJson = await wantRes.json();
         const payload = responseJson.data !== undefined ? responseJson.data : responseJson;
         
         const content = payload.content || (Array.isArray(payload) ? payload : []);
@@ -158,34 +162,34 @@ export default function Allocations({ onBack }: AllocationsProps) {
           setTotalElements(prev => append ? prev + content.length : content.length);
         }
 
-        const tPages = payload.totalPages !== undefined ? payload.totalPages : Math.max(1, Math.ceil((payload.totalElements || content.length) / 10));
+        const tPages = payload.totalPages !== undefined ? payload.totalPages : Math.max(1, Math.ceil((payload.totalElements || content.length) / 5));
         setTotalPages(tPages);
 
         if (append) {
-          setAllocations(prev => [...prev, ...content]);
+          setItems(prev => [...prev, ...content]);
         } else {
-          setAllocations(content);
+          setItems(content);
         }
         
         setIsLastPage(last);
         setPage(pageNumber);
       }
     } catch (e) {
-      console.error('Error fetching allocations:', e);
+      console.error('Error fetching items:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCardClick = async (allocId?: number) => {
-    if (!allocId) return;
+  const handleCardClick = async (id?: number) => {
+    if (!id) return;
     
     setIsEditing(false);
     setIsModalOpen(true);
     setIsFetchingDetails(true);
     
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping/allocId/${allocId}`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/wantlist/id/${id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${sessionToken}`
@@ -197,8 +201,8 @@ export default function Allocations({ onBack }: AllocationsProps) {
         const payload = responseJson.data !== undefined ? responseJson.data : responseJson;
         
         // Extract from array since the backend wraps the item in data: [...]
-        const detailedAllocation = Array.isArray(payload) && payload.length > 0 ? payload[0] : payload;
-        setSelectedAllocation(detailedAllocation);
+        const detailedItem = Array.isArray(payload) && payload.length > 0 ? payload[0] : payload;
+        setSelectedItem(detailedItem);
       }
     } catch (e) {
       console.error('Error fetching details:', e);
@@ -214,24 +218,32 @@ export default function Allocations({ onBack }: AllocationsProps) {
     const username = localStorage.getItem('pfm_username') || 'Unknown User';
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/create/`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
-          ...newAlloc,
+          ...newItem,
+          estimatedPrice: Number(newItem.estimatedPrice) || 0,
           addedBy: username
         })
       });
 
       if (res.ok) {
         setIsCreateModalOpen(false);
-        setNewAlloc({ allocation: '', type: 'Savings', description: '', status: 'Active' });
-        setResultDialog({ status: 'success', message: 'Allocation created successfully.' });
+        setNewItem({
+          item: '',
+          afford: 'Save monthly',
+          dateWanted: '',
+          estimatedPrice: '0',
+          remarks: '',
+          status: 'Planned'
+        });
+        setResultDialog({ status: 'success', message: 'Want List created successfully.' });
       } else {
-        setResultDialog({ status: 'failed', message: 'Failed to create allocation.' });
+        setResultDialog({ status: 'failed', message: 'Failed to create Want List.' });
       }
     } catch (e) {
       console.error('Error creating:', e);
@@ -242,36 +254,40 @@ export default function Allocations({ onBack }: AllocationsProps) {
   };
 
   const promptUpdate = () => {
-    if (!selectedAllocation || !selectedAllocation.allocId || !sessionToken) return;
+    if (!selectedItem || !selectedItem.id || !sessionToken) return;
 
     const updatedFields: any = {};
-    if (editAlloc.allocation !== selectedAllocation.allocation) updatedFields.allocation = editAlloc.allocation;
-    if (editAlloc.type !== selectedAllocation.type) updatedFields.type = editAlloc.type;
-    if (editAlloc.description !== selectedAllocation.description) updatedFields.description = editAlloc.description;
-    if (editAlloc.status !== selectedAllocation.status) updatedFields.status = editAlloc.status;
+    if (editItem.item !== selectedItem.item) updatedFields.item = editItem.item;
+    if (editItem.afford !== selectedItem.afford) updatedFields.afford = editItem.afford;
+    if (editItem.dateWanted !== selectedItem.dateWanted) updatedFields.dateWanted = editItem.dateWanted;
+    if (editItem.estimatedPrice !== selectedItem.estimatedPrice) updatedFields.estimatedPrice = Number(editItem.estimatedPrice) || 0;
+    if (editItem.remarks !== selectedItem.remarks) updatedFields.remarks = editItem.remarks;
+    if (editItem.status !== selectedItem.status) updatedFields.status = editItem.status;
 
     if (Object.keys(updatedFields).length === 0) {
       setIsEditing(false);
       return;
     }
 
-    setConfirmDialog({ type: 'update', message: 'Are you sure you want to save these updated changes to this allocation?' });
+    setConfirmDialog({ type: 'update', message: 'Are you sure you want to save these updated changes to this Want List?' });
   };
 
   const executeUpdate = async () => {
     setConfirmDialog(null);
-    if (!selectedAllocation || !selectedAllocation.allocId || !sessionToken) return;
+    if (!selectedItem || !selectedItem.id || !sessionToken) return;
 
     const updatedFields: any = {};
-    if (editAlloc.allocation !== selectedAllocation.allocation) updatedFields.allocation = editAlloc.allocation;
-    if (editAlloc.type !== selectedAllocation.type) updatedFields.type = editAlloc.type;
-    if (editAlloc.description !== selectedAllocation.description) updatedFields.description = editAlloc.description;
-    if (editAlloc.status !== selectedAllocation.status) updatedFields.status = editAlloc.status;
+    if (editItem.item !== selectedItem.item) updatedFields.item = editItem.item;
+    if (editItem.afford !== selectedItem.afford) updatedFields.afford = editItem.afford;
+    if (editItem.dateWanted !== selectedItem.dateWanted) updatedFields.dateWanted = editItem.dateWanted;
+    if (editItem.estimatedPrice !== selectedItem.estimatedPrice) updatedFields.estimatedPrice = Number(editItem.estimatedPrice) || 0;
+    if (editItem.remarks !== selectedItem.remarks) updatedFields.remarks = editItem.remarks;
+    if (editItem.status !== selectedItem.status) updatedFields.status = editItem.status;
 
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown User';
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/update/${selectedAllocation.allocId}`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/update/${selectedItem.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -281,9 +297,9 @@ export default function Allocations({ onBack }: AllocationsProps) {
       });
 
       if (res.ok) {
-        setResultDialog({ status: 'success', message: 'Allocation updated successfully.' });
+        setResultDialog({ status: 'success', message: 'Want List updated successfully.' });
       } else {
-        setResultDialog({ status: 'failed', message: 'Failed to update allocation.' });
+        setResultDialog({ status: 'failed', message: 'Failed to update Want List.' });
       }
     } catch (e) {
       console.error('Update error:', e);
@@ -292,16 +308,16 @@ export default function Allocations({ onBack }: AllocationsProps) {
   };
 
   const promptDelete = () => {
-    if (!selectedAllocation || !selectedAllocation.allocId || !sessionToken) return;
-    setConfirmDialog({ type: 'delete', message: 'Are you sure you want to permanently delete this allocation? This action cannot be undone.' });
+    if (!selectedItem || !selectedItem.id || !sessionToken) return;
+    setConfirmDialog({ type: 'delete', message: 'Are you sure you want to permanently delete this Want List? This action cannot be undone.' });
   };
 
   const executeDelete = async () => {
     setConfirmDialog(null);
-    if (!selectedAllocation || !selectedAllocation.allocId || !sessionToken) return;
+    if (!selectedItem || !selectedItem.id || !sessionToken) return;
     
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/delete/${selectedAllocation.allocId}`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/delete/${selectedItem.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${sessionToken}`
@@ -309,9 +325,9 @@ export default function Allocations({ onBack }: AllocationsProps) {
       });
       
       if (res.ok) {
-        setResultDialog({ status: 'success', message: 'Allocation deleted successfully.' });
+        setResultDialog({ status: 'success', message: 'Want List deleted successfully.' });
       } else {
-        setResultDialog({ status: 'failed', message: 'Failed to delete allocation.' });
+        setResultDialog({ status: 'failed', message: 'Failed to delete Want List.' });
       }
     } catch (e) {
       console.error('Delete error:', e);
@@ -320,7 +336,14 @@ export default function Allocations({ onBack }: AllocationsProps) {
   };
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
-  const getColor = (type?: string) => type === 'Savings' ? '#3CAE5A' : '#4CAF50';
+  const getColor = (status?: string) => {
+    switch(status) {
+      case 'Planned': return '#3498db';
+      case 'Achieved': return '#2ecc71';
+      case 'Cancelled': return '#e74c3c';
+      default: return '#95a5a6';
+    }
+  };
 
   return (
     <div className="app-container allocations-page">
@@ -334,13 +357,14 @@ export default function Allocations({ onBack }: AllocationsProps) {
           </button>
           
           <div className="header-titles">
-            <h1 className="allocations-title">Allocations</h1>
-            <p className="allocations-subtitle">{totalElements} ALLOCATIONS</p>
+            <h1 className="allocations-title">Want Lists</h1>
+            <p className="allocations-subtitle">{totalElements} WANT LISTS</p>
           </div>
           <button className="icon-btn" onClick={() => {
             setTempFilters({
-              allocation: searchFilters.allocation || '',
-              type: searchFilters.type || '',
+              item: searchFilters.item || '',
+              afford: searchFilters.afford || '',
+              remarks: searchFilters.remarks || '',
               status: searchFilters.status || ''
             });
             setIsSearchModalOpen(true);
@@ -372,31 +396,30 @@ export default function Allocations({ onBack }: AllocationsProps) {
           </div>
         )}
 
-        {allocations.length > 0 ? (
+        {items.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
-            {allocations.map((alloc, i) => (
+            {items.map((it, i) => (
               <div 
-                key={alloc.allocId || i} 
+                key={it.id || i} 
                 className="allocation-card clickable-card"
-                onClick={() => handleCardClick(alloc.allocId)}
+                onClick={() => handleCardClick(it.id)}
               >
-                <div className="alloc-avatar" style={{ backgroundColor: getColor(alloc.type) }}>
-                  {getInitial(alloc.allocation)}
+                <div className="alloc-avatar" style={{ backgroundColor: getColor(it.status) }}>
+                  {getInitial(it.item)}
                 </div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">{alloc.allocation || 'Unnamed'}</h3>
+                  <h3 className="alloc-name">{it.item || 'Unnamed'}</h3>
                   <p className="alloc-meta">
-                    {alloc.type || 'Unknown'} &bull; 
+                    {it.afford || 'Unknown'} &bull; 
                     <span 
-                      className={alloc.status === 'Active' ? '' : 'alloc-status-inactive'} 
-                      style={{ color: alloc.status === 'Active' ? '#3CAE5A' : undefined, marginLeft: '4px' }}
+                      style={{ color: getColor(it.status), marginLeft: '4px', fontWeight: '500' }}
                     >
-                      {alloc.status || 'Not Active'}
+                      {it.status || 'Planned'}
                     </span>
                   </p>
                 </div>
                 <div className="alloc-date">
-                  {alloc.addedBy ? `@${alloc.addedBy}` : ''}
+                  {it.addedBy ? `@${it.addedBy}` : ''}
                 </div>
               </div>
             ))}
@@ -449,9 +472,9 @@ export default function Allocations({ onBack }: AllocationsProps) {
                 className="desk-illustration empty-state-img"
               />
             </div>
-            <h3 className="empty-state-title">No allocations yet</h3>
+            <h3 className="empty-state-title">No Want Lists yet</h3>
             <p className="empty-state-text">
-              {loading ? 'Loading allocations...' : 'Create your first allocation to start tracking your investments.'}
+              {loading ? 'Loading Want Lists...' : 'Create your first Want List.'}
             </p>
           </div>
         )}
@@ -465,39 +488,62 @@ export default function Allocations({ onBack }: AllocationsProps) {
         <div className="modal-overlay" onClick={() => !isCreating && setIsCreateModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="close-btn" disabled={isCreating} onClick={() => setIsCreateModalOpen(false)}>×</button>
-            <h2 className="form-title">Create Allocation</h2>
+            <h2 className="form-title">Create Want List</h2>
             <form className="login-form" style={{ marginTop: '20px' }}>
               <div className="input-group">
-                <label>Allocation Name</label>
+                <label>Want List Item</label>
                 <input 
                   type="text" 
-                  placeholder="Enter custom allocation" 
-                  value={newAlloc.allocation} 
-                  onChange={e => setNewAlloc({...newAlloc, allocation: e.target.value})} 
+                  placeholder="What do you want?" 
+                  value={newItem.item} 
+                  onChange={e => setNewItem({...newItem, item: e.target.value})} 
                   disabled={isCreating}
                 />
               </div>
 
               <div className="input-group">
-                <label>Type</label>
+                <label>Affordability</label>
                 <select 
-                  value={newAlloc.type} 
-                  onChange={e => setNewAlloc({...newAlloc, type: e.target.value})} 
+                  value={newItem.afford} 
+                  onChange={e => setNewItem({...newItem, afford: e.target.value})} 
                   className="dropdown-select"
                   disabled={isCreating}
                 >
-                  <option value="Savings">Savings</option>
-                  <option value="Investments">Investments</option>
+                  <option value="Save monthly">Save monthly</option>
+                  <option value="One-time payment">One-time payment</option>
+                  <option value="Installment">Installment</option>
+                  <option value="Not Afford">Not Afford</option>
                 </select>
               </div>
 
               <div className="input-group">
-                <label>Description</label>
+                <label>Estimated Price</label>
+                <input 
+                  type="number" 
+                  placeholder="How much?" 
+                  value={newItem.estimatedPrice} 
+                  onChange={e => setNewItem({...newItem, estimatedPrice: e.target.value})} 
+                  disabled={isCreating}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Date Wanted</label>
+                <input 
+                  type="date" 
+                  value={newItem.dateWanted} 
+                  onChange={e => setNewItem({...newItem, dateWanted: e.target.value})} 
+                  disabled={isCreating}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Remarks</label>
                 <input 
                   type="text" 
-                  placeholder="Detailed description" 
-                  value={newAlloc.description} 
-                  onChange={e => setNewAlloc({...newAlloc, description: e.target.value})} 
+                  placeholder="Extra notes..." 
+                  value={newItem.remarks} 
+                  onChange={e => setNewItem({...newItem, remarks: e.target.value})} 
                   disabled={isCreating}
                 />
               </div>
@@ -505,13 +551,15 @@ export default function Allocations({ onBack }: AllocationsProps) {
               <div className="input-group">
                 <label>Status</label>
                 <select 
-                  value={newAlloc.status} 
-                  onChange={e => setNewAlloc({...newAlloc, status: e.target.value})} 
+                  value={newItem.status} 
+                  onChange={e => setNewItem({...newItem, status: e.target.value})} 
                   className="dropdown-select"
                   disabled={isCreating}
                 >
-                  <option value="Active">Active</option>
-                  <option value="Not Active">Not Active</option>
+                  <option value="Planned">Planned</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Achieved">Achieved</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
 
@@ -522,7 +570,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
                 className="primary-btn margin-top-lg" 
                 style={{ opacity: (!isFormValid || isCreating) ? 0.5 : 1 }}
               >
-                {isCreating ? 'Creating...' : 'Create Allocation'}
+                {isCreating ? 'Creating...' : 'Create Want List'}
               </button>
             </form>
           </div>
@@ -537,50 +585,72 @@ export default function Allocations({ onBack }: AllocationsProps) {
               <div className="flex-center" style={{ height: '200px' }}>
                 <p>Loading details...</p>
               </div>
-            ) : selectedAllocation ? (
+            ) : selectedItem ? (
               <div className="alloc-detail-content">
                 {isEditing ? (
                   <div className="login-form">
-                    <h2 className="form-title" style={{ fontSize: '22px', textAlign: 'left', marginBottom: '16px' }}>Edit Allocation</h2>
+                    <h2 className="form-title" style={{ fontSize: '22px', textAlign: 'left', marginBottom: '16px' }}>Edit Want List</h2>
                     <div className="input-group">
-                      <label>Allocation Name</label>
+                      <label>Item Name</label>
                       <input 
                         type="text" 
-                        value={editAlloc.allocation || ''} 
-                        onChange={e => setEditAlloc({...editAlloc, allocation: e.target.value})} 
+                        value={editItem.item || ''} 
+                        onChange={e => setEditItem({...editItem, item: e.target.value})} 
                       />
                     </div>
                     
                     <div className="input-group">
-                      <label>Type</label>
+                      <label>Affordability</label>
                       <select 
-                        value={editAlloc.type || ''} 
-                        onChange={e => setEditAlloc({...editAlloc, type: e.target.value})} 
+                        value={editItem.afford || ''} 
+                        onChange={e => setEditItem({...editItem, afford: e.target.value})} 
                         className="dropdown-select"
                       >
-                        <option value="Savings">Savings</option>
-                        <option value="Investments">Investments</option>
+                        <option value="Save monthly">Save monthly</option>
+                        <option value="One-time payment">One-time payment</option>
+                        <option value="Installment">Installment</option>
+                        <option value="Not Afford">Not Afford</option>
                       </select>
                     </div>
 
                     <div className="input-group">
-                      <label>Description</label>
+                      <label>Estimated Price</label>
+                      <input 
+                        type="number" 
+                        value={editItem.estimatedPrice || 0} 
+                        onChange={e => setEditItem({...editItem, estimatedPrice: Number(e.target.value)})} 
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label>Date Wanted</label>
+                      <input 
+                        type="date" 
+                        value={editItem.dateWanted || ''} 
+                        onChange={e => setEditItem({...editItem, dateWanted: e.target.value})} 
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label>Remarks</label>
                       <input 
                         type="text" 
-                        value={editAlloc.description || ''} 
-                        onChange={e => setEditAlloc({...editAlloc, description: e.target.value})} 
+                        value={editItem.remarks || ''} 
+                        onChange={e => setEditItem({...editItem, remarks: e.target.value})} 
                       />
                     </div>
 
                     <div className="input-group">
                       <label>Status</label>
                       <select 
-                        value={editAlloc.status || ''} 
-                        onChange={e => setEditAlloc({...editAlloc, status: e.target.value})} 
+                        value={editItem.status || ''} 
+                        onChange={e => setEditItem({...editItem, status: e.target.value})} 
                         className="dropdown-select"
                       >
-                        <option value="Active">Active</option>
-                        <option value="Not Active">Not Active</option>
+                        <option value="Planned">Planned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Achieved">Achieved</option>
+                        <option value="Cancelled">Cancelled</option>
                       </select>
                     </div>
 
@@ -592,57 +662,67 @@ export default function Allocations({ onBack }: AllocationsProps) {
                 ) : (
                   <>
                     <div className="alloc-detail-header">
-                      <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedAllocation.type), margin: '0 auto 16px', width: '64px', height: '64px', fontSize: '28px' }}>
-                        {getInitial(selectedAllocation.allocation)}
+                      <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.status), margin: '0 auto 16px', width: '64px', height: '64px', fontSize: '28px' }}>
+                        {getInitial(selectedItem.item)}
                       </div>
-                      <h2 style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--text-dark)' }}>{selectedAllocation.allocation}</h2>
+                      <h2 style={{ fontSize: '24px', marginBottom: '8px', color: 'var(--text-dark)' }}>{selectedItem.item}</h2>
                       <span className="alloc-meta" style={{ display: 'inline-block', marginBottom: '24px' }}>
-                        <span className={selectedAllocation.status === 'Active' ? '' : 'alloc-status-inactive'} style={{ color: selectedAllocation.status === 'Active' ? '#3CAE5A' : undefined, fontWeight: '600' }}>
-                          {selectedAllocation.status || 'Unknown'}
+                        <span style={{ color: getColor(selectedItem.status), fontWeight: '600' }}>
+                          {selectedItem.status || 'Unknown'}
                         </span>
                       </span>
                     </div>
                     
                     <div className="detail-grid">
                       <div className="detail-group">
-                        <label>Type</label>
-                        <p>{selectedAllocation.type || '—'}</p>
+                        <label>Affordability</label>
+                        <p>{selectedItem.afford || '—'}</p>
                       </div>
                       <div className="detail-group">
-                        <label>Description</label>
-                        <p>{selectedAllocation.description || '—'}</p>
+                        <label>Estimated Price</label>
+                        <p>{selectedItem.estimatedPrice !== undefined ? `₱${selectedItem.estimatedPrice.toLocaleString()}` : '—'}</p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Date Wanted</label>
+                        <p>{selectedItem.dateWanted || '—'}</p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Remarks</label>
+                        <p>{selectedItem.remarks || '—'}</p>
                       </div>
                       <div className="detail-group">
                         <label>Added By</label>
-                        <p>{selectedAllocation.addedBy ? `@${selectedAllocation.addedBy}` : '—'}</p>
+                        <p>{selectedItem.addedBy ? `@${selectedItem.addedBy}` : '—'}</p>
                       </div>
                       <div className="detail-group">
                         <label>Date Added</label>
-                        <p>{selectedAllocation.dateAdded || '—'}</p>
+                        <p>{selectedItem.dateAdded || '—'}</p>
                       </div>
                       <div className="detail-group">
                         <label>Updated By</label>
-                        <p>{selectedAllocation.updateBy ? `@${selectedAllocation.updateBy}` : '—'}</p>
+                        <p>{selectedItem.updateBy ? `@${selectedItem.updateBy}` : '—'}</p>
                       </div>
                       <div className="detail-group">
                         <label>Update Date</label>
-                        <p>{selectedAllocation.updateDate || '—'}</p>
+                        <p>{selectedItem.updateDate || '—'}</p>
                       </div>
                     </div>
 
                     <button 
                       className="secondary-btn margin-top-lg" 
                       onClick={() => {
-                        setEditAlloc({
-                          allocation: selectedAllocation.allocation,
-                          type: selectedAllocation.type,
-                          description: selectedAllocation.description,
-                          status: selectedAllocation.status
+                        setEditItem({
+                          item: selectedItem.item,
+                          afford: selectedItem.afford,
+                          estimatedPrice: selectedItem.estimatedPrice,
+                          dateWanted: selectedItem.dateWanted,
+                          remarks: selectedItem.remarks,
+                          status: selectedItem.status
                         });
                         setIsEditing(true);
                       }}
                     >
-                      Edit Allocation
+                      Edit Want List
                     </button>
                   </>
                 )}
@@ -713,30 +793,42 @@ export default function Allocations({ onBack }: AllocationsProps) {
         <div className="modal-overlay" style={{ zIndex: 120 }} onClick={() => setIsSearchModalOpen(false)}>
           <div className="modal-content" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setIsSearchModalOpen(false)}>×</button>
-            <h2 className="form-title" style={{ fontSize: '24px', textAlign: 'left', marginBottom: '24px' }}>Search Allocations</h2>
+            <h2 className="form-title" style={{ fontSize: '24px', textAlign: 'left', marginBottom: '24px' }}>Search Want Lists</h2>
             
             <div className="login-form">
               <div className="input-group">
-                <label>Allocation Name</label>
+                <label>Item Name</label>
                 <input 
                   type="text" 
-                  placeholder="Enter specific keywords..."
-                  value={tempFilters.allocation}
-                  onChange={(e) => setTempFilters({...tempFilters, allocation: sanitizeInput(e.target.value)})}
+                  placeholder="Enter item keywords..."
+                  value={tempFilters.item}
+                  onChange={(e) => setTempFilters({...tempFilters, item: sanitizeInput(e.target.value)})}
                 />
               </div>
 
               <div className="input-group">
-                <label>Type Filter</label>
+                <label>Affordability Filter</label>
                 <select 
-                  value={tempFilters.type}
-                  onChange={(e) => setTempFilters({...tempFilters, type: e.target.value})}
+                  value={tempFilters.afford}
+                  onChange={(e) => setTempFilters({...tempFilters, afford: e.target.value})}
                   className="dropdown-select"
                 >
                   <option value="">Any Type</option>
-                  <option value="Savings">Savings</option>
-                  <option value="Investments">Investments</option>
+                  <option value="Save monthly">Save monthly</option>
+                  <option value="One-time payment">One-time payment</option>
+                  <option value="Installment">Installment</option>
+                  <option value="Not Afford">Not Afford</option>
                 </select>
+              </div>
+
+              <div className="input-group">
+                <label>Remarks Filter</label>
+                <input 
+                  type="text" 
+                  placeholder="Notes keywords..."
+                  value={tempFilters.remarks}
+                  onChange={(e) => setTempFilters({...tempFilters, remarks: sanitizeInput(e.target.value)})}
+                />
               </div>
 
               <div className="input-group">
@@ -747,8 +839,10 @@ export default function Allocations({ onBack }: AllocationsProps) {
                   className="dropdown-select"
                 >
                   <option value="">Any Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Not Active">Not Active</option>
+                  <option value="Planned">Planned</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Achieved">Achieved</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
 
@@ -756,8 +850,9 @@ export default function Allocations({ onBack }: AllocationsProps) {
                 className="primary-btn margin-top-lg"
                 onClick={() => {
                   const activeFilters: any = {};
-                  if (tempFilters.allocation.trim() !== '') activeFilters.allocation = tempFilters.allocation.trim();
-                  if (tempFilters.type !== '') activeFilters.type = tempFilters.type;
+                  if (tempFilters.item.trim() !== '') activeFilters.item = tempFilters.item.trim();
+                  if (tempFilters.afford !== '') activeFilters.afford = tempFilters.afford;
+                  if (tempFilters.remarks.trim() !== '') activeFilters.remarks = tempFilters.remarks.trim();
                   if (tempFilters.status !== '') activeFilters.status = tempFilters.status;
                   
                   setSearchFilters(activeFilters);
