@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import avatarUrl from './assets/avatar.png';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import './App.css';
+import './assets/css/App.css';
 
 // Custom Minimal SVG Icons
 const PieChartIcon = () => (
@@ -83,9 +83,10 @@ interface DashboardProps {
   onLogout: () => void;
   onNavigateToAllocations: () => void;
   onNavigateToWantList: () => void;
+  onNavigateToTracker: () => void;
 }
 
-export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList }: DashboardProps) {
+export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList, onNavigateToTracker }: DashboardProps) {
   const [username, setUsername] = useState('User');
 
   useEffect(() => {
@@ -160,7 +161,8 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
                 style={{ animationDelay: `${index * 60}ms` }}
                 onClick={
                   t.name === 'Allocation' ? onNavigateToAllocations : 
-                  t.name === 'Want Lists' ? onNavigateToWantList : undefined
+                  t.name === 'Want Lists' ? onNavigateToWantList : 
+                  t.name === 'Tracker' ? onNavigateToTracker : undefined
                 }
               >
                 <div className="icon-wrapper">

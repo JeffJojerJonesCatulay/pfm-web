@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import './App.css';
+import './assets/css/App.css';
 
 interface LoginProps {
   onLogin: () => void;
