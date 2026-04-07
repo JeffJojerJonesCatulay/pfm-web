@@ -40,6 +40,9 @@ const PenIcon = () => (
 
 export default function SalaryRecord({ onBack }: SalaryRecordProps) {
   const [items, setItems] = useState<SalaryRecordItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(true);
   const [loading, setLoading] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
   
@@ -66,7 +69,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
   const [editItem, setEditItem] = useState<Partial<SalaryRecordItem>>({});
 
   useEffect(() => {
-    fetchData(searchFilters);
+    fetchData(0, false, searchFilters);
   }, [searchFilters]);
 
   const ensureFreshToken = async (): Promise<string | null> => {
@@ -99,17 +102,17 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     return token;
   };
 
-  const fetchData = async (filtersOverride?: typeof searchFilters) => {
+  const fetchData = async (pageNumber: number = 0, append: boolean = false, filtersOverride?: typeof searchFilters) => {
     setLoading(true);
     try {
       const token = await ensureFreshToken();
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/salarytracker?page=0&size=20&sortBy=salaryId`;
+      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/salarytracker?page=${pageNumber}&size=10&sortBy=salaryId`;
       
       if (Object.keys(currentFilters).length > 0) {
-        apiUrl = `${import.meta.env.PFM_BASE_URL}search/salarytracker?page=0&size=20&sortBy=salaryId`;
+        apiUrl = `${import.meta.env.PFM_BASE_URL}search/salarytracker?page=${pageNumber}&size=10&sortBy=salaryId`;
         const params = new URLSearchParams();
         Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
         apiUrl += `&${params.toString()}`;
@@ -119,8 +122,12 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
       if (res.ok) {
         const json = await res.json();
         const payload = json.data || json;
-        setItems(payload.content || []);
+        const content = payload.content || [];
+        setItems(append ? [...items, ...content] : content);
         setTotalElements(payload.totalElements || 0);
+        setTotalPages(payload.totalPages || 1);
+        setIsLastPage(payload.last !== undefined ? payload.last : true);
+        setPage(pageNumber);
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -236,7 +243,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
             {items.map((it, i) => (
               <div key={it.salaryId || i} className="allocation-card clickable-card" onClick={() => handleCardClick(it.salaryId)}>
-                <div className="alloc-avatar" style={{ backgroundColor: '#2ecc71' }}>S</div>
+                <div className="alloc-avatar" style={{ backgroundColor: '#2ecc71' }}>₱</div>
                 <div className="alloc-info">
                   <h3 className="alloc-name">₱{(it.salary || 0).toLocaleString()}</h3>
                   <p className="alloc-meta">{it.status}</p>
@@ -244,6 +251,22 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                 <div className="alloc-date">{it.dateAdded || ''}</div>
               </div>
             ))}
+            
+            <div className="pagination-container">
+              <button className="pagination-btn" onClick={() => fetchData(page - 1, false)} disabled={page === 0 || loading}>Prev</button>
+              <div className="pagination-numbers">
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const showPage = totalPages <= 7 || (idx === 0 || idx === totalPages - 1 || Math.abs(page - idx) <= 1);
+                  if (!showPage && idx === 1) return <span key={idx}>...</span>;
+                  if (!showPage && idx === totalPages - 2) return <span key={idx}>...</span>;
+                  if (!showPage) return null;
+                  return (
+                    <button key={idx} className={`pagination-number ${page === idx ? 'active' : ''}`} onClick={() => fetchData(idx, false)} disabled={loading}>{idx + 1}</button>
+                  );
+                })}
+              </div>
+              <button className="pagination-btn" onClick={() => fetchData(page + 1, false)} disabled={isLastPage || loading}>Next</button>
+            </div>
           </div>
         ) : (
           <div className="empty-state-container">
@@ -318,7 +341,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                 ) : (
                   <>
                     <div className="alloc-detail-header">
-                      <div className="alloc-avatar large" style={{ backgroundColor: '#2ecc71' }}>S</div>
+                      <div className="alloc-avatar large" style={{ backgroundColor: '#2ecc71' }}>₱</div>
                       <h2>₱{(selectedItem.salary || 0).toLocaleString()}</h2>
                       <span style={{ color: '#2ecc71', fontWeight: '600' }}>{selectedItem.status}</span>
                     </div>

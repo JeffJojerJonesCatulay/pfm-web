@@ -125,6 +125,8 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
                     onClick={() => {
                       localStorage.removeItem('pfm_username');
                       localStorage.removeItem('pfm_password');
+                      localStorage.removeItem('pfm_token');
+                      localStorage.removeItem('pfm_token_time');
                       onLogout();
                     }}
                     className="secondary-btn"

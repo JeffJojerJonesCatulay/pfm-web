@@ -4,16 +4,17 @@ import './assets/css/App.css';
 
 interface TrackerItem {
   id?: number;
-  transaction?: string;
-  category?: string;
-  amount?: number;
-  remarks?: string;
+  salaryId?: number;
+  expenseDescription?: string;
+  expenseType?: string;
+  expenseValue?: number;
   status?: string;
   date?: string;
   dateAdded?: string;
   addedBy?: string;
   updateDate?: string;
   updateBy?: string;
+  remarks?: string;
 }
 
 interface AllocationsProps {
@@ -57,20 +58,28 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   const [loading, setLoading] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [sessionToken, setSessionToken] = useState('');
+  
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const [selectedItem, setSelectedItem] = useState<TrackerItem | null>(null);
+  const [salaryInfo, setSalaryInfo] = useState<any>(null);
+  const [isSalaryInfoLoading, setIsSalaryInfoLoading] = useState(false);
+  const [showSalaryOverlay, setShowSalaryOverlay] = useState(false);
+  const [allSalaries, setAllSalaries] = useState<any[]>([]);
+  const [activeSalaryOptions, setActiveSalaryOptions] = useState<any[]>([]);
+  const [selectedSalaryId, setSelectedSalaryId] = useState<number | null>(null);
+  const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
-    transaction: '',
-    category: 'Expense',
-    amount: '0',
+    expenseDescription: '',
+    expenseType: 'Fund Transfer',
+    expenseValue: '0',
     remarks: '',
     status: 'Completed',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    salaryId: ''
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -78,8 +87,8 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
   
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<{transaction?: string, status?: string}>({});
-  const [tempFilters, setTempFilters] = useState({ transaction: '', status: '' });
+  const [searchFilters, setSearchFilters] = useState<{expenseDescription?: string, expenseType?: string}>({});
+  const [tempFilters, setTempFilters] = useState({ expenseDescription: '', expenseType: '' });
 
   const [isEditing, setIsEditing] = useState(false);
   const [editItem, setEditItem] = useState<Partial<TrackerItem>>({});
@@ -88,60 +97,224 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     return val.replace(/(--|\/|\\|;|%|\$|\*|!|`|~)/g, '');
   };
 
-  const isFormValid = newItem.transaction.trim() !== '' && 
-                       newItem.category.trim() !== '' && 
+  const isFormValid = newItem.expenseDescription.trim() !== '' && 
+                       newItem.expenseType.trim() !== '' && 
                        newItem.date.trim() !== '' && 
-                       newItem.status.trim() !== '';
+                       newItem.salaryId.trim() !== '';
+
+  const ensureFreshToken = async (): Promise<string | null> => {
+    const username = localStorage.getItem('pfm_username');
+    const password = localStorage.getItem('pfm_password');
+    if (!username || !password) return null;
+
+    let token = localStorage.getItem('pfm_token') || '';
+    const tokenTime = Number(localStorage.getItem('pfm_token_time') || 0);
+    const isExpired = Date.now() - tokenTime > 1000 * 60 * 10; 
+
+    if (!token || isExpired) {
+      try {
+        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (authRes.ok) {
+          const authText = await authRes.text();
+          try {
+            const parsed = JSON.parse(authText);
+            token = parsed.data?.token || parsed.token || parsed.accessToken || parsed.jwt || authText;
+          } catch (e) { token = authText; }
+          localStorage.setItem('pfm_token', token);
+          localStorage.setItem('pfm_token_time', Date.now().toString());
+        } else { return null; }
+      } catch (e) { return null; }
+    }
+    return token;
+  };
 
   useEffect(() => {
-    fetchData(0, false, searchFilters);
-  }, [searchFilters]);
+    fetchAllSalaryPeriods();
+  }, []);
 
-  const fetchData = async (pageNumber: number, append: boolean, _filtersOverride?: typeof searchFilters) => {
-    setLoading(true);
-    // Simulating dummy API response
-    setTimeout(() => {
-      const dummyData: TrackerItem[] = [
-        { id: 1, transaction: 'Grocery Shopping', category: 'Expense', amount: 1500, status: 'Completed', date: '2026-04-01', addedBy: 'jeff' },
-        { id: 2, transaction: 'Salary Deposit', category: 'Income', amount: 50000, status: 'Completed', date: '2026-04-02', addedBy: 'jeff' },
-        { id: 3, transaction: 'Electricity Bill', category: 'Expense', amount: 2500, status: 'Pending', date: '2026-04-05', addedBy: 'jeff' }
-      ];
-      
-      setItems(dummyData);
-      setTotalElements(dummyData.length);
+  useEffect(() => {
+    if (selectedSalaryId) {
+      fetchData(0, false, searchFilters);
+      fetchSalaryDetailsForSummary(selectedSalaryId);
+    }
+  }, [selectedSalaryId, searchFilters]);
+
+  const fetchSalaryDetailsForSummary = async (id: number) => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salarytracker/id/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const data = Array.isArray(json.data) ? json.data[0] : (json.data || json);
+        setSalaryInfo(data);
+      }
+    } catch (e) { console.error('Error fetching salary details for summary:', e); }
+  };
+
+  useEffect(() => {
+    if (isCreateModalOpen || isEditing) {
+      fetchActiveSalaryOptions();
+    }
+  }, [isCreateModalOpen, isEditing]);
+
+  const fetchAllSalaryPeriods = async () => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/salarytracker?page=0&size=100&sortBy=salaryId`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.data?.content || json.content || [];
+        setAllSalaries(content);
+      }
+    } catch (e) { console.error('Error fetching all salary periods:', e); }
+  };
+
+  const fetchActiveSalaryOptions = async () => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/salarytracker?page=0&size=100&sortBy=salaryId&status=Active`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.data?.content || json.content || [];
+        setActiveSalaryOptions(content);
+        if (content.length > 0 && !newItem.salaryId) {
+          setNewItem(prev => ({ ...prev, salaryId: content[0].salaryId.toString() }));
+        }
+      }
+    } catch (e) { console.error('Error fetching active salary options:', e); }
+  };
+
+  const handleSelectInitialSalary = (id: number) => {
+    setSelectedSalaryId(id);
+    setIsInitialModalOpen(false);
+    // When creation happens later, use this by default.
+    setNewItem(prev => ({ ...prev, salaryId: id.toString() }));
+  };
+
+  const fetchData = async (pageNumber: number, append: boolean, filtersOverride?: typeof searchFilters) => {
+    if (!selectedSalaryId) return;
+    if (!append) {
+      setItems([]);
+      setTotalElements(0);
       setTotalPages(1);
-      setIsLastPage(true);
-      setPage(pageNumber);
+    }
+    setLoading(true);
+    try {
+      const token = await ensureFreshToken();
+      if (!token) return;
+
+      const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
+      let apiUrl = `${import.meta.env.PFM_BASE_URL}search/salaryexpensetracker/salaryId/${selectedSalaryId}?page=${pageNumber}&size=20&sortBy=id`;
+      
+      const params = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
+      let queryStr = params.toString();
+      // Replace %20 with + as requested
+      queryStr = queryStr.replace(/%20/g, '+');
+      if (queryStr) apiUrl += `&${queryStr}`;
+
+      const res = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const json = await res.json();
+        const payload = json.data || json;
+        const content = payload.content || [];
+        setItems(append ? [...items, ...content] : content);
+        setIsLastPage(payload.last !== undefined ? payload.last : true);
+        setTotalElements(payload.totalElements || 0);
+        setTotalPages(payload.totalPages || 1);
+        setPage(pageNumber);
+      } else {
+        if (!append) setItems([]);
+      }
+    } catch (e) {
+      console.error('Error fetching tracker data:', e);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleCardClick = async (id?: number) => {
-    if (!id) return;
+    const token = await ensureFreshToken();
+    if (!id || !token) return;
     
     setIsEditing(false);
     setIsModalOpen(true);
     setIsFetchingDetails(true);
     
-    // Simulate Detail API
-    setTimeout(() => {
-      const found = items.find(i => i.id === id);
-      setSelectedItem(found || null);
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salaryexpensetracker/id/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const detail = Array.isArray(json.data) ? json.data[0] : (json.data || json);
+        setSelectedItem(detail);
+        setEditItem(detail);
+      }
+    } catch (e) {
+      console.error('Error fetching tracker detail:', e);
+    } finally {
       setIsFetchingDetails(false);
-    }, 500);
+    }
   };
 
   const handleCreate = async () => {
     if (!isFormValid) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
     setIsCreating(true);
     
-    // Simulate Create API
-    setTimeout(() => {
+    try {
+      const username = localStorage.getItem('pfm_username') || 'system';
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/create/`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          salaryId: Number(newItem.salaryId),
+          date: newItem.date,
+          expenseDescription: sanitizeInput(newItem.expenseDescription), 
+          expenseValue: Number(newItem.expenseValue), 
+          expenseType: newItem.expenseType, 
+          addedBy: username
+        })
+      });
+      if (res.ok) {
+        setIsCreateModalOpen(false);
+        setResultDialog({ status: 'success', message: 'Tracker record created successfully.' });
+        fetchData(0, false);
+        setNewItem({
+          expenseDescription: '',
+          expenseType: 'Variable',
+          expenseValue: '0',
+          remarks: '',
+          status: 'Completed',
+          date: new Date().toISOString().split('T')[0],
+          salaryId: ''
+        });
+      } else {
+        setResultDialog({ status: 'failed', message: 'Failed to create tracker record.' });
+      }
+    } catch (e) {
+      setResultDialog({ status: 'failed', message: 'An error occurred during creation.' });
+    } finally {
       setIsCreating(false);
-      setIsCreateModalOpen(false);
-      setResultDialog({ status: 'success', message: 'Tracker record created successfully (Dummy).' });
-      fetchData(0, false);
-    }, 1000);
+    }
   };
 
   const promptUpdate = () => {
@@ -150,8 +323,38 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
   const executeUpdate = async () => {
     setConfirmDialog(null);
-    // Simulate Update API
-    setResultDialog({ status: 'success', message: 'Tracker record updated successfully (Dummy).' });
+    const token = await ensureFreshToken();
+    if (!selectedItem || !selectedItem.id || !token) return;
+
+    const updatedFields: any = {};
+    if (editItem.expenseDescription !== selectedItem.expenseDescription) updatedFields.expenseDescription = sanitizeInput(editItem.expenseDescription || '');
+    if (editItem.expenseType !== selectedItem.expenseType) updatedFields.expenseType = editItem.expenseType;
+    if (Number(editItem.expenseValue) !== selectedItem.expenseValue) updatedFields.expenseValue = Number(editItem.expenseValue);
+    if (editItem.date !== selectedItem.date) updatedFields.date = editItem.date;
+    if (Number(editItem.salaryId) !== selectedItem.salaryId) updatedFields.salaryId = Number(editItem.salaryId);
+
+    if (Object.keys(updatedFields).length === 0) return;
+    updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
+
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/update/${selectedItem.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Tracker record updated successfully.' });
+        fetchData(page, false);
+        setIsModalOpen(false);
+      } else {
+        setResultDialog({ status: 'failed', message: 'Failed to update tracker record.' });
+      }
+    } catch (e) {
+      setResultDialog({ status: 'failed', message: 'An error occurred during update.' });
+    }
   };
 
   const promptDelete = () => {
@@ -160,12 +363,49 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
   const executeDelete = async () => {
     setConfirmDialog(null);
-    // Simulate Delete API
-    setResultDialog({ status: 'success', message: 'Tracker record deleted successfully (Dummy).' });
+    const token = await ensureFreshToken();
+    if (!selectedItem || !selectedItem.id || !token) return;
+
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/delete/${selectedItem.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Tracker record deleted successfully.' });
+        fetchData(page, false);
+        setIsModalOpen(false);
+      } else {
+        setResultDialog({ status: 'failed', message: 'Failed to delete tracker record.' });
+      }
+    } catch (e) {
+      setResultDialog({ status: 'failed', message: 'An error occurred during deletion.' });
+    }
+  };
+
+  const handleViewSalaryInfo = async (id: number) => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    setIsSalaryInfoLoading(true);
+    setShowSalaryOverlay(true);
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salarytracker/id/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const data = Array.isArray(json.data) ? json.data[0] : (json.data || json);
+        setSalaryInfo(data);
+      }
+    } catch (e) {
+      console.error('Error fetching salary info:', e);
+    } finally {
+      setIsSalaryInfoLoading(false);
+    }
   };
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
-  const getColor = (category?: string) => category === 'Income' ? '#2ecc71' : '#e74c3c';
+  const getColor = (type?: string) => type === 'Income' ? '#2ecc71' : '#e74c3c';
 
   return (
     <div className="app-container allocations-page">
@@ -180,9 +420,23 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
           
           <div className="header-titles">
             <h1 className="allocations-title">Tracker</h1>
-            <p className="allocations-subtitle">{totalElements} RECORDS</p>
+            <p className="allocations-subtitle">
+              {selectedSalaryId ? (
+                `SALARY DATE: ${allSalaries.find(s => s.salaryId === selectedSalaryId)?.date || '...'} • ${totalElements} RECORDS`
+              ) : `${totalElements} RECORDS`}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {selectedSalaryId && (
+              <button 
+                className="premium-pill-btn" 
+                onClick={() => setIsInitialModalOpen(true)}
+                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
+              >
+                <PenIcon />
+                <span>Change Salary</span>
+              </button>
+            )}
             <button 
               className="premium-pill-btn" 
               onClick={onNavigateToSalaryRecord}
@@ -198,6 +452,43 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       </section>
 
       <main className="allocations-main">
+        {selectedSalaryId && salaryInfo && items.length > 0 && (
+          <section className="summary-banner" style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f3f4f6' }}>
+            <div className="summary-item">
+              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Salary Amount</span>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{(salaryInfo.salary || 0).toLocaleString()}</h3>
+            </div>
+            <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
+            <div className="summary-item">
+              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</span>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{items.reduce((acc, it) => acc + (it.expenseValue || 0), 0).toLocaleString()}</h3>
+            </div>
+            <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
+            <div className="summary-item" style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Remaining</span>
+              <h3 style={{ 
+                fontSize: '20px', 
+                margin: '4px 0 0', 
+                fontWeight: '700', 
+                color: (salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)) >= 0 ? '#10b981' : '#ef4444' 
+              }}>
+                ₱{(salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)).toLocaleString()}
+              </h3>
+            </div>
+          </section>
+        )}
+
+        {Object.keys(searchFilters).length > 0 && (
+          <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap' }}>
+            {Object.entries(searchFilters).map(([k, v]) => (
+              <div key={k} style={{ background: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: 600 }}>{k}:</span> {v as string}
+                <button onClick={() => { const nf = {...searchFilters}; delete (nf as any)[k]; setSearchFilters(nf); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {items.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
             {items.map((it, i) => (
@@ -206,13 +497,13 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 className="allocation-card clickable-card"
                 onClick={() => handleCardClick(it.id)}
               >
-                <div className="alloc-avatar" style={{ backgroundColor: getColor(it.category) }}>
-                  {getInitial(it.transaction)}
+                <div className="alloc-avatar" style={{ backgroundColor: getColor(it.expenseType) }}>
+                  {getInitial(it.expenseDescription)}
                 </div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">{it.transaction || 'Unnamed'}</h3>
+                  <h3 className="alloc-name">{it.expenseDescription || 'Unnamed'}</h3>
                   <p className="alloc-meta">
-                    {it.category || 'Unknown'} &bull; ₱{(it.amount || 0).toLocaleString()} &bull; 
+                    {it.expenseType || 'Unknown'} &bull; ₱{(it.expenseValue || 0).toLocaleString()} &bull; 
                     <span style={{ marginLeft: '4px', fontWeight: '500' }}>{it.status}</span>
                   </p>
                 </div>
@@ -221,6 +512,22 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 </div>
               </div>
             ))}
+
+            <div className="pagination-container">
+              <button className="pagination-btn" onClick={() => fetchData(page - 1, false)} disabled={page === 0 || loading}>Prev</button>
+              <div className="pagination-numbers">
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const showPage = totalPages <= 7 || (idx === 0 || idx === totalPages - 1 || Math.abs(page - idx) <= 1);
+                  if (!showPage && idx === 1) return <span key={idx}>...</span>;
+                  if (!showPage && idx === totalPages - 2) return <span key={idx}>...</span>;
+                  if (!showPage) return null;
+                  return (
+                    <button key={idx} className={`pagination-number ${page === idx ? 'active' : ''}`} onClick={() => fetchData(idx, false)} disabled={loading}>{idx + 1}</button>
+                  );
+                })}
+              </div>
+              <button className="pagination-btn" onClick={() => fetchData(page + 1, false)} disabled={isLastPage || loading}>Next</button>
+            </div>
           </div>
         ) : (
           <div className="empty-state-container">
@@ -243,20 +550,33 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
             <h2 className="form-title">Add Tracker Record</h2>
             <form className="login-form">
                <div className="input-group">
-                <label>Transaction Name</label>
-                <input type="text" placeholder="e.g. Lunch out" value={newItem.transaction} onChange={e => setNewItem({...newItem, transaction: e.target.value})} />
+                <label>Description</label>
+                <input type="text" placeholder="e.g. Lunch out" value={newItem.expenseDescription} onChange={e => setNewItem({...newItem, expenseDescription: e.target.value})} />
+              </div>
+               <div className="input-group">
+                 <label>Type</label>
+                 <select className="dropdown-select" value={newItem.expenseType} onChange={e => setNewItem({...newItem, expenseType: e.target.value})}>
+                   <option value="Fund Transfer">Fund Transfer</option>
+                   <option value="ATM Withdrawal">ATM Withdrawal</option>
+                 </select>
+               </div>
+              <div className="input-group">
+                <label>Value (₱)</label>
+                <input type="number" value={newItem.expenseValue} onChange={e => setNewItem({...newItem, expenseValue: e.target.value})} />
               </div>
               <div className="input-group">
-                <label>Category</label>
-                <select className="dropdown-select" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})}>
-                  <option value="Income">Income</option>
-                  <option value="Expense">Expense</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label>Amount</label>
-                <input type="number" value={newItem.amount} onChange={e => setNewItem({...newItem, amount: e.target.value})} />
-              </div>
+                 <label>Salary Date</label>
+                 <select 
+                   className="dropdown-select" 
+                   value={newItem.salaryId} 
+                   onChange={e => setNewItem({...newItem, salaryId: e.target.value})}
+                 >
+                   <option value="">Select Salary Date</option>
+                   {activeSalaryOptions.map(s => (
+                     <option key={s.salaryId} value={s.salaryId.toString()}>{s.date}</option>
+                   ))}
+                 </select>
+               </div>
               <div className="input-group">
                 <label>Date</label>
                 <input type="date" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
@@ -272,20 +592,159 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
           <div className="modal-content alloc-detail-modal" onClick={e => e.stopPropagation()}>
             {isFetchingDetails ? <p>Loading details...</p> : selectedItem && (
               <div className="alloc-detail-content">
-                <div className="alloc-detail-header">
-                  <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.category) }}>{getInitial(selectedItem.transaction)}</div>
-                  <h2>{selectedItem.transaction}</h2>
-                  <span style={{ color: getColor(selectedItem.category), fontWeight: '600' }}>{selectedItem.category}</span>
-                </div>
-                <div className="detail-grid">
-                  <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.amount || 0).toLocaleString()}</p></div>
-                  <div className="detail-group"><label>Date</label><p>{selectedItem.date}</p></div>
-                  <div className="detail-group"><label>Status</label><p>{selectedItem.status}</p></div>
-                  <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                </div>
-                <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
+                {isEditing ? (
+                   <div className="login-form">
+                    <h2 className="form-title">Edit Record</h2>
+                    <div className="input-group">
+                      <label>Description</label>
+                      <input type="text" value={editItem.expenseDescription || ''} onChange={e => setEditItem({...editItem, expenseDescription: e.target.value})} />
+                    </div>
+                    <div className="input-group">
+                      <label>Type</label>
+                      <select className="dropdown-select" value={editItem.expenseType || 'Fund Transfer'} onChange={e => setEditItem({...editItem, expenseType: e.target.value})}>
+                        <option value="Fund Transfer">Fund Transfer</option>
+                        <option value="ATM Withdrawal">ATM Withdrawal</option>
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label>Value (₱)</label>
+                      <input type="number" value={editItem.expenseValue || 0} onChange={e => setEditItem({...editItem, expenseValue: Number(e.target.value)})} />
+                    </div>
+                    <div className="input-group">
+                      <label>Salary Record</label>
+                      <select 
+                        className="dropdown-select" 
+                        value={editItem.salaryId || ''} 
+                        onChange={e => setEditItem({...editItem, salaryId: Number(e.target.value)})}
+                      >
+                        <option value="">Select Salary Date</option>
+                        {activeSalaryOptions.map(s => (
+                          <option key={s.salaryId} value={s.salaryId}>{s.date}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label>Date</label>
+                      <input type="date" value={editItem.date || ''} onChange={e => setEditItem({...editItem, date: e.target.value})} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                      <button className="primary-btn" style={{ flex: 1 }} onClick={promptUpdate}>Update</button>
+                      <button className="secondary-btn" style={{ flex: 1, borderColor: '#e53e3e', color: '#e53e3e' }} onClick={promptDelete}>Delete</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="alloc-detail-header">
+                      <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.expenseType) }}>{getInitial(selectedItem.expenseDescription)}</div>
+                      <h2>{selectedItem.expenseDescription}</h2>
+                      <span style={{ color: getColor(selectedItem.expenseType), fontWeight: '600' }}>{selectedItem.expenseType}</span>
+                    </div>
+                    <div className="detail-grid">
+                      <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.expenseValue || 0).toLocaleString()}</p></div>
+                      <div className="detail-group"><label>Expense Type</label><p>{selectedItem.expenseType}</p></div>
+                      <div className="detail-group">
+                        <label>Salary Record</label>
+                        {selectedItem.salaryId ? (
+                          <button 
+                            className="premium-pill-btn" 
+                            onClick={() => handleViewSalaryInfo(selectedItem.salaryId!)} 
+                            style={{ 
+                              fontSize: '12px', 
+                              padding: '8px 16px', 
+                              height: 'auto', 
+                              marginTop: '8px',
+                              background: '#10b981',
+                              color: 'white',
+                              fontWeight: '600',
+                              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                            }}
+                          >
+                            View Salary Info
+                          </button>
+                        ) : <p>—</p>}
+                      </div>
+                      <div className="detail-group"><label>Transaction Date</label><p>{selectedItem.date}</p></div>
+                      <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded || '—'}</p></div>
+                      <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
+                      <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'} {selectedItem.updateBy ? `(@${selectedItem.updateBy})` : ''}</p></div>
+                    </div>
+                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
+                  </>
+                )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {isInitialModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <h2 className="form-title" style={{ marginBottom: '10px' }}>Select Salary Record</h2>
+            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '25px' }}>
+              Please select a payout date to access the corresponding transaction tracker list.
+            </p>
+            <div className="login-form">
+              <div className="input-group">
+                <label>Active Salary Payouts</label>
+                <select 
+                  className="dropdown-select" 
+                  autoFocus
+                  onChange={e => e.target.value && handleSelectInitialSalary(Number(e.target.value))}
+                  value={selectedSalaryId || ''}
+                >
+                  <option value="">Choose a payout date...</option>
+                  {allSalaries.map(s => (
+                    <option key={s.salaryId} value={s.salaryId}>{s.date}</option>
+                  ))}
+                </select>
+              </div>
+              <button 
+                type="button" 
+                className="secondary-btn margin-top-md" 
+                style={{ width: '100%', borderColor: '#6b7280', color: '#6b7280' }} 
+                onClick={onBack}
+              >
+                Back to Dashboard
+              </button>
+              <p style={{ color: '#9ca3af', fontSize: '11px', marginTop: '15px' }}>
+                You cannot access the tracker without selecting an active salary record.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSearchModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsSearchModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2 className="form-title">Search & Filters</h2>
+            <div className="login-form">
+              <div className="input-group">
+                <label>Expense Description</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Rice"
+                  value={tempFilters.expenseDescription} 
+                  onChange={e => setTempFilters({...tempFilters, expenseDescription: e.target.value})} 
+                />
+              </div>
+              <div className="input-group">
+                <label>Expense Type</label>
+                <select className="dropdown-select" value={tempFilters.expenseType} onChange={e => setTempFilters({...tempFilters, expenseType: e.target.value})}>
+                  <option value="">All Types</option>
+                  <option value="Fund Transfer">Fund Transfer</option>
+                  <option value="ATM Withdrawal">ATM Withdrawal</option>
+                </select>
+              </div>
+              <button className="primary-btn margin-top-lg" onClick={() => {
+                const final: any = {};
+                if (tempFilters.expenseDescription.trim()) final.expenseDescription = tempFilters.expenseDescription.trim();
+                if (tempFilters.expenseType) final.expenseType = tempFilters.expenseType;
+                setSearchFilters(final);
+                setIsSearchModalOpen(false);
+              }}>Apply Search</button>
+            </div>
           </div>
         </div>
       )}
@@ -299,6 +758,25 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
               <button className="primary-btn" onClick={() => confirmDialog.type === 'update' ? executeUpdate() : executeDelete()}>Proceed</button>
               <button className="secondary-btn" onClick={() => setConfirmDialog(null)}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSalaryOverlay && (
+        <div className="modal-overlay" onClick={() => setShowSalaryOverlay(false)} style={{ zIndex: 160 }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 className="form-title">Salary Information</h2>
+            {isSalaryInfoLoading ? <p>Fetching salary details...</p> : salaryInfo ? (
+              <div className="detail-grid" style={{ marginTop: '20px' }}>
+                <div className="detail-group"><label>Salary Amount</label><p>₱{(salaryInfo.salary || 0).toLocaleString()}</p></div>
+                <div className="detail-group"><label>Salary Date</label><p>{salaryInfo.date}</p></div>
+                <div className="detail-group"><label>Status</label><p>{salaryInfo.status}</p></div>
+                <div className="detail-group"><label>Date Added</label><p>{salaryInfo.dateAdded}</p></div>
+                <div className="detail-group"><label>Added By</label><p>@{salaryInfo.addedBy}</p></div>
+                <div className="detail-group"><label>Last Updated</label><p>{salaryInfo.updateDate || '—'} {salaryInfo.updateBy ? `(@${salaryInfo.updateBy})` : ''}</p></div>
+              </div>
+            ) : <p>No salary record found for this transaction.</p>}
+            <button className="primary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => setShowSalaryOverlay(false)}>Close View</button>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Dashboard from './Dashboard';
 import Login from './Login';
 import Allocations from './Allocations';
@@ -10,13 +10,6 @@ import './assets/css/App.css';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord'>('dashboard');
-
-  useEffect(() => {
-    const storedUsername = localStorage.getItem('pfm_username');
-    if (storedUsername) {
-      setIsLoggedIn(true);
-    }
-  }, []);
 
   return (
     <>
