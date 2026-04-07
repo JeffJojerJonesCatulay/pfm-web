@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import avatarUrl from './assets/avatar.png';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import './assets/css/App.css';
+import './css/App.css';
+import { PFM_VERSION } from './config';
 
 // Custom Minimal SVG Icons
 const PieChartIcon = () => (
@@ -88,6 +89,7 @@ interface DashboardProps {
 
 export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList, onNavigateToTracker }: DashboardProps) {
   const [username, setUsername] = useState('User');
+  const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
     const storedUsername = localStorage.getItem('pfm_username');
@@ -164,7 +166,8 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
                 onClick={
                   t.name === 'Allocation' ? onNavigateToAllocations : 
                   t.name === 'Want Lists' ? onNavigateToWantList : 
-                  t.name === 'Tracker' ? onNavigateToTracker : undefined
+                  t.name === 'Tracker' ? onNavigateToTracker : 
+                  t.name === 'About' ? () => setShowAbout(true) : undefined
                 }
               >
                 <div className="icon-wrapper">
@@ -176,6 +179,27 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
           </div>
         </div>
       </main>
+
+      {showAbout && (
+        <div className="modal-overlay" onClick={() => setShowAbout(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center', padding: '40px 20px' }}>
+            <h2 className="form-title">About PFM</h2>
+            <div style={{ margin: '24px 0' }}>
+              <div className="avatar-container" style={{ margin: '0 auto 16px', width: '80px', height: '80px', border: '3px solid #6366f1' }}>
+                <img src={avatarUrl} alt="Logo" className="avatar-img" />
+              </div>
+              <p style={{ color: '#111827', fontWeight: '700', fontSize: '18px' }}>Personal Finance Manager</p>
+              <p style={{ background: '#f3f4f6', display: 'inline-block', padding: '4px 12px', borderRadius: '12px', color: '#6366f1', fontWeight: '600', marginTop: '8px' }}>
+                {PFM_VERSION}
+              </p>
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6' }}>
+              A centralized personal finance management platform designed as a multi-repository system to track salary, expenses, credit card usage, subscriptions, net worth, and financial goals in one unified ecosystem.
+            </p>
+            <button className="primary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => setShowAbout(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

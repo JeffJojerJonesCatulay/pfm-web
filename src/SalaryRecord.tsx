@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import './assets/css/App.css';
+import './css/App.css';
 
 interface SalaryRecordItem {
   salaryId?: number;

@@ -5,7 +5,7 @@ import Allocations from './Allocations';
 import WantList from './WantList';
 import Tracker from './Tracker';
 import SalaryRecord from './SalaryRecord';
-import './assets/css/App.css';
+import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import './assets/css/App.css';
+import './css/App.css';
 
 interface WantListItem {
   id?: number;
@@ -48,7 +48,6 @@ export default function WantList({ onBack }: WantListProps) {
   const [loading, setLoading] = useState(false);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [sessionToken, setSessionToken] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
@@ -110,7 +109,6 @@ export default function WantList({ onBack }: WantListProps) {
         return null;
       }
     }
-    setSessionToken(token);
     return token;
   };
 
