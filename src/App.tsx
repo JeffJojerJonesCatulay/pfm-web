@@ -5,11 +5,13 @@ import Allocations from './Allocations';
 import WantList from './WantList';
 import Tracker from './Tracker';
 import SalaryRecord from './SalaryRecord';
+import CCDetails from './CCDetails';
+import ConnectedApps from './ConnectedApps';
 import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps'>('dashboard');
 
   return (
     <>
@@ -22,12 +24,17 @@ function App() {
           <Tracker onBack={() => setCurrentView('dashboard')} onNavigateToSalaryRecord={() => setCurrentView('salaryRecord')} />
         ) : currentView === 'salaryRecord' ? (
           <SalaryRecord onBack={() => setCurrentView('tracker')} />
+        ) : currentView === 'ccdetails' ? (
+          <CCDetails onBack={() => setCurrentView('dashboard')} onNavigateToConnectedApps={() => setCurrentView('connectedApps')} />
+        ) : currentView === 'connectedApps' ? (
+          <ConnectedApps onBack={() => setCurrentView('ccdetails')} />
         ) : (
           <Dashboard 
             onLogout={() => setIsLoggedIn(false)} 
             onNavigateToAllocations={() => setCurrentView('allocations')}
             onNavigateToWantList={() => setCurrentView('wantlist')}
             onNavigateToTracker={() => setCurrentView('tracker')}
+            onNavigateToCCDetails={() => setCurrentView('ccdetails')}
           />
         )
       ) : (

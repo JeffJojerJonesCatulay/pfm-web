@@ -85,9 +85,10 @@ interface DashboardProps {
   onNavigateToAllocations: () => void;
   onNavigateToWantList: () => void;
   onNavigateToTracker: () => void;
+  onNavigateToCCDetails: () => void;
 }
 
-export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList, onNavigateToTracker }: DashboardProps) {
+export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList, onNavigateToTracker, onNavigateToCCDetails }: DashboardProps) {
   const [username, setUsername] = useState('User');
   const [showAbout, setShowAbout] = useState(false);
 
@@ -167,6 +168,7 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
                   t.name === 'Allocation' ? onNavigateToAllocations : 
                   t.name === 'Want Lists' ? onNavigateToWantList : 
                   t.name === 'Tracker' ? onNavigateToTracker : 
+                  t.name === 'CC Details' ? onNavigateToCCDetails :
                   t.name === 'About' ? () => setShowAbout(true) : undefined
                 }
               >
