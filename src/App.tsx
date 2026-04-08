@@ -9,11 +9,14 @@ import CCDetails from './CCDetails';
 import ConnectedApps from './ConnectedApps';
 import CCExpense from './CCExpense';
 import BillingCycle from './BillingCycle';
+import Investment from './Investment';
+import InvestmentGrowth from './InvestmentGrowth';
+import InvestmentYearlyGrowth from './InvestmentYearlyGrowth';
 import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle' | 'investment' | 'investmentGrowth' | 'investmentYearlyGrowth'>('dashboard');
 
   return (
     <>
@@ -34,6 +37,12 @@ function App() {
           <CCExpense onBack={() => setCurrentView('dashboard')} onNavigateToBillingCycle={() => setCurrentView('billingCycle')} />
         ) : currentView === 'billingCycle' ? (
           <BillingCycle onBack={() => setCurrentView('ccexpense')} />
+        ) : currentView === 'investment' ? (
+          <Investment onBack={() => setCurrentView('dashboard')} onNavigateToGrowth={() => setCurrentView('investmentGrowth')} onNavigateToYearlyGrowth={() => setCurrentView('investmentYearlyGrowth')} />
+        ) : currentView === 'investmentGrowth' ? (
+          <InvestmentGrowth onBack={() => setCurrentView('investment')} />
+        ) : currentView === 'investmentYearlyGrowth' ? (
+          <InvestmentYearlyGrowth onBack={() => setCurrentView('investment')} />
         ) : (
           <Dashboard 
             onLogout={() => setIsLoggedIn(false)} 
@@ -42,6 +51,7 @@ function App() {
             onNavigateToTracker={() => setCurrentView('tracker')}
             onNavigateToCCDetails={() => setCurrentView('ccdetails')}
             onNavigateToCCExpense={() => setCurrentView('ccexpense')}
+            onNavigateToInvestment={() => setCurrentView('investment')}
           />
         )
       ) : (

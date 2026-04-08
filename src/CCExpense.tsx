@@ -50,9 +50,18 @@ const PlusIcon = () => (
 
 interface CCExpenseProps {
   onBack: () => void;
+  onNavigateToBillingCycle: () => void;
 }
 
-export default function CCExpense({ onBack }: CCExpenseProps) {
+const WalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
+    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+  </svg>
+);
+
+export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpenseProps) {
   const [items, setItems] = useState<CCExpenseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -212,7 +221,7 @@ export default function CCExpense({ onBack }: CCExpenseProps) {
 
   const fetchCcOptions = async () => {
     const token = await ensureFreshToken();
-    if (!token) return;
+    if (!token) return {};
     try {
       const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -244,7 +253,8 @@ export default function CCExpense({ onBack }: CCExpenseProps) {
         
         const newCycleMap: Record<number, string> = {};
         activeOnly.forEach((cy: BillingCycleItem) => {
-          newCycleMap[cy.ccRecId] = `${namesMap[cy.ccId] || 'Card'} | ${cy.dateFrom} - ${cy.dateTo}`;
+          const cardName = namesMap && namesMap[cy.ccId] ? namesMap[cy.ccId] : 'Card';
+          newCycleMap[cy.ccRecId] = `${cardName} | ${cy.dateFrom} - ${cy.dateTo}`;
         });
         setCycleMap(newCycleMap);
       }
@@ -349,10 +359,11 @@ export default function CCExpense({ onBack }: CCExpenseProps) {
             {selectedCycleId && (
               <button 
                 className="premium-pill-btn" 
-                onClick={() => setIsInitialModalOpen(true)}
+                onClick={onNavigateToBillingCycle}
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
               >
-                <span>Change Cycle</span>
+                <WalletIcon />
+                <span>Billing Cycles</span>
               </button>
             )}
             <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>

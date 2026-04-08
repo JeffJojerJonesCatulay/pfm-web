@@ -69,7 +69,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   const [allSalaries, setAllSalaries] = useState<any[]>([]);
   const [activeSalaryOptions, setActiveSalaryOptions] = useState<any[]>([]);
   const [selectedSalaryId, setSelectedSalaryId] = useState<number | null>(null);
-  const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
+  const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -137,9 +137,11 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   }, []);
 
   useEffect(() => {
+    fetchData(0, false, searchFilters);
     if (selectedSalaryId) {
-      fetchData(0, false, searchFilters);
       fetchSalaryDetailsForSummary(selectedSalaryId);
+    } else {
+      setSalaryInfo(null);
     }
   }, [selectedSalaryId, searchFilters]);
 
@@ -205,7 +207,6 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   };
 
   const fetchData = async (pageNumber: number, append: boolean, filtersOverride?: typeof searchFilters) => {
-    if (!selectedSalaryId) return;
     if (!append) {
       setItems([]);
       setTotalElements(0);
@@ -217,7 +218,11 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}search/salaryexpensetracker/salaryId/${selectedSalaryId}?page=${pageNumber}&size=20&sortBy=id`;
+      const baseEndpoint = selectedSalaryId 
+        ? `search/salaryexpensetracker/salaryId/${selectedSalaryId}`
+        : `get/salaryexpensetracker`;
+
+      let apiUrl = `${import.meta.env.PFM_BASE_URL}${baseEndpoint}?page=${pageNumber}&size=20&sortBy=id`;
       
       const params = new URLSearchParams();
       Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
@@ -434,7 +439,17 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
               >
                 <PenIcon />
-                <span>Change Salary</span>
+                <span>Switch Salary</span>
+              </button>
+            )}
+            {!selectedSalaryId && (
+              <button 
+                className="premium-pill-btn" 
+                onClick={() => setIsInitialModalOpen(true)}
+                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
+              >
+                <WalletIcon />
+                <span>Select Salary</span>
               </button>
             )}
             <button 
@@ -677,54 +692,57 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         </div>
       )}
 
+      {/* CHOOSE SALARY OVERLAY */}
       {isInitialModalOpen && (
-        <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => selectedSalaryId && setIsInitialModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
-            <h2 className="form-title" style={{ marginBottom: '10px' }}>{selectedSalaryId ? 'Switch Salary Record' : 'Select Salary Record'}</h2>
-            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '25px' }}>
-              {selectedSalaryId ? 'Choose a different payout date to switch trackers.' : 'Please select a payout date to access the corresponding transaction tracker list.'}
-            </p>
-            <div className="login-form">
-              <div className="input-group">
-                <label>Active Salary Payouts</label>
-                <select 
-                  className="dropdown-select" 
-                  autoFocus
-                  onChange={e => e.target.value && handleSelectInitialSalary(Number(e.target.value))}
-                  value={selectedSalaryId || ''}
+        <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setIsInitialModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h2 className="form-title" style={{ margin: 0 }}>Tracker Filter</h2>
+                {selectedSalaryId && (
+                  <button 
+                  onClick={() => { setSelectedSalaryId(null); setIsInitialModalOpen(false); }}
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Clear Filter
+                  </button>
+                )}
+            </div>
+            <p className="signup-prompt" style={{ marginBottom: '24px' }}>Choose a salary payout date to view specific transactions or clear and see all records.</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+               <button 
+                  className={`allocation-card clickable-card ${selectedSalaryId === null ? 'active-selection' : ''}`}
+                  style={{ width: '100%', border: selectedSalaryId === null ? '2px solid #10b981' : '1px solid #e5e7eb', padding: '16px', display: 'flex', alignItems: 'center' }}
+                  onClick={() => {
+                    setSelectedSalaryId(null);
+                    setIsInitialModalOpen(false);
+                  }}
                 >
-                  <option value="">{selectedSalaryId ? 'Keep current selection...' : 'Choose a payout date...'}</option>
-                  {allSalaries.map(s => (
-                    <option key={s.salaryId} value={s.salaryId}>{s.date}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {selectedSalaryId ? (
-                <button 
-                  type="button" 
-                  className="secondary-btn margin-top-md" 
-                  style={{ width: '100%' }} 
-                  onClick={() => setIsInitialModalOpen(false)}
-                >
-                  Close
+                  <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>★</div>
+                  <div className="alloc-info" style={{ textAlign: 'left' }}>
+                    <h3 className="alloc-name">Global Master View</h3>
+                    <p className="alloc-meta">All Transactions Combined</p>
+                  </div>
                 </button>
-              ) : (
+
+              {allSalaries.map(s => (
                 <button 
-                  type="button" 
-                  className="secondary-btn margin-top-md" 
-                  style={{ width: '100%', borderColor: '#6b7280', color: '#6b7280' }} 
-                  onClick={onBack}
+                  key={s.salaryId} 
+                  className={`allocation-card clickable-card ${selectedSalaryId === s.salaryId ? 'active-selection' : ''}`}
+                  style={{ width: '100%', border: selectedSalaryId === s.salaryId ? '2px solid #10b981' : '1px solid #e5e7eb', padding: '16px', display: 'flex', alignItems: 'center' }}
+                  onClick={() => handleSelectInitialSalary(s.salaryId)}
                 >
-                  Back to Dashboard
+                  <div className="alloc-avatar" style={{ backgroundColor: '#3b82f6' }}>📅</div>
+                  <div className="alloc-info" style={{ textAlign: 'left' }}>
+                    <h3 className="alloc-name">{s.date}</h3>
+                    <p className="alloc-meta">Salary Period: {s.status}</p>
+                  </div>
                 </button>
-              )}
-              
-              {!selectedSalaryId && (
-                <p style={{ color: '#9ca3af', fontSize: '11px', marginTop: '15px' }}>
-                  You cannot access the tracker without selecting an active salary record.
-                </p>
-              )}
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsInitialModalOpen(false)}>Close</button>
+              <button className="secondary-btn" style={{ flex: 1, color: '#6b7280', border: '1px solid #e5e7eb' }} onClick={onBack}>Return to Dashboard</button>
             </div>
           </div>
         </div>

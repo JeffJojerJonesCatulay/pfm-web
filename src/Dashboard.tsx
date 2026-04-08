@@ -71,7 +71,7 @@ const LogoutIcon = () => (
 
 const transactions = [
   { name: 'Allocation', icon: <PieChartIcon /> },
-  { name: 'Investments', icon: <LineChartIcon /> },
+  { name: 'Investment', icon: <LineChartIcon /> },
   { name: 'Want Lists', icon: <CartPlusIcon /> },
   { name: 'Tracker', icon: <BillIcon /> },
   { name: 'CC Expense', icon: <CreditCardIcon /> },
@@ -87,9 +87,18 @@ interface DashboardProps {
   onNavigateToTracker: () => void;
   onNavigateToCCDetails: () => void;
   onNavigateToCCExpense?: () => void;
+  onNavigateToInvestment?: () => void;
 }
 
-export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigateToWantList, onNavigateToTracker, onNavigateToCCDetails, onNavigateToCCExpense }: DashboardProps) {
+export default function Dashboard({ 
+  onLogout, 
+  onNavigateToAllocations, 
+  onNavigateToWantList, 
+  onNavigateToTracker, 
+  onNavigateToCCDetails, 
+  onNavigateToCCExpense,
+  onNavigateToInvestment
+}: DashboardProps) {
   const [username, setUsername] = useState('User');
   const [showAbout, setShowAbout] = useState(false);
 
@@ -167,6 +176,7 @@ export default function Dashboard({ onLogout, onNavigateToAllocations, onNavigat
                 style={{ animationDelay: `${index * 60}ms` }}
                 onClick={
                   t.name === 'Allocation' ? onNavigateToAllocations : 
+                  t.name === 'Investment' ? onNavigateToInvestment :
                   t.name === 'Want Lists' ? onNavigateToWantList : 
                   t.name === 'Tracker' ? onNavigateToTracker : 
                   t.name === 'CC Details' ? onNavigateToCCDetails :
