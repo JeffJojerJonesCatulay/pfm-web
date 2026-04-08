@@ -10,13 +10,13 @@ import ConnectedApps from './ConnectedApps';
 import CCExpense from './CCExpense';
 import BillingCycle from './BillingCycle';
 import Investment from './Investment';
-import InvestmentGrowth from './InvestmentGrowth';
+import InvestmentMonthlyGrowth from './InvestmentMonthlyGrowth';
 import InvestmentYearlyGrowth from './InvestmentYearlyGrowth';
 import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle' | 'investment' | 'investmentGrowth' | 'investmentYearlyGrowth'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle' | 'investment' | 'investmentMonthlyGrowth' | 'investmentYearlyGrowth'>('dashboard');
 
   return (
     <>
@@ -38,9 +38,9 @@ function App() {
         ) : currentView === 'billingCycle' ? (
           <BillingCycle onBack={() => setCurrentView('ccexpense')} />
         ) : currentView === 'investment' ? (
-          <Investment onBack={() => setCurrentView('dashboard')} onNavigateToGrowth={() => setCurrentView('investmentGrowth')} onNavigateToYearlyGrowth={() => setCurrentView('investmentYearlyGrowth')} />
-        ) : currentView === 'investmentGrowth' ? (
-          <InvestmentGrowth onBack={() => setCurrentView('investment')} />
+          <Investment onBack={() => setCurrentView('dashboard')} onNavigateToMonthlyGrowth={() => setCurrentView('investmentMonthlyGrowth')} onNavigateToYearlyGrowth={() => setCurrentView('investmentYearlyGrowth')} />
+        ) : currentView === 'investmentMonthlyGrowth' ? (
+          <InvestmentMonthlyGrowth onBack={() => setCurrentView('investment')} />
         ) : currentView === 'investmentYearlyGrowth' ? (
           <InvestmentYearlyGrowth onBack={() => setCurrentView('investment')} />
         ) : (

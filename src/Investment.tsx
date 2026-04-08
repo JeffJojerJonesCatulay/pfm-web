@@ -13,7 +13,7 @@ interface InvestmentItem {
 
 interface InvestmentProps {
   onBack: () => void;
-  onNavigateToGrowth: () => void;
+  onNavigateToMonthlyGrowth: () => void;
   onNavigateToYearlyGrowth: () => void;
 }
 
@@ -38,7 +38,7 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function Investment({ onBack, onNavigateToGrowth, onNavigateToYearlyGrowth }: InvestmentProps) {
+export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNavigateToYearlyGrowth }: InvestmentProps) {
   const [items, setItems] = useState<InvestmentItem[]>([]);
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
@@ -323,7 +323,7 @@ export default function Investment({ onBack, onNavigateToGrowth, onNavigateToYea
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
-              <button className="primary-btn" style={{ width: '100%', background: '#3b82f6' }} onClick={onNavigateToGrowth}>Monthly Growth Analytics</button>
+              <button className="primary-btn" style={{ width: '100%', background: '#3b82f6' }} onClick={onNavigateToMonthlyGrowth}>Monthly Growth Analytics</button>
               <button className="primary-btn" style={{ width: '100%', background: '#10b981' }} onClick={onNavigateToYearlyGrowth}>Yearly Growth Analytics</button>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsInitialModalOpen(false)}>Close</button>

@@ -18,7 +18,7 @@ interface GrowthRecord {
   updateDate?: string;
 }
 
-interface InvestmentGrowthProps {
+interface InvestmentMonthlyGrowthProps {
   onBack: () => void;
 }
 
@@ -36,7 +36,7 @@ const PenIcon = () => (
     </svg>
 );
 
-export default function InvestmentGrowth({ onBack }: InvestmentGrowthProps) {
+export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGrowthProps) {
   const [items, setItems] = useState<GrowthRecord[]>([]);
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
