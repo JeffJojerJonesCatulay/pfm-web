@@ -2,12 +2,29 @@ import { useState, useEffect } from 'react';
 import './css/App.css';
 
 interface CCExpenseItem {
-  id?: number;
-  ccName?: string;
-  amount?: number;
-  date?: string;
-  merchant?: string;
-  status?: string;
+  ccExpId?: number;
+  ccRecId: number;
+  date: string;
+  expenseDescription: string;
+  expenseValue: number;
+  addedBy: string;
+  dateAdded?: string;
+  updateDate?: string;
+  updatedBy?: string;
+}
+
+interface BillingCycleItem {
+  ccRecId: number;
+  ccId: number;
+  dateFrom: string;
+  dateTo: string;
+  status: string;
+}
+
+interface CCDetail {
+  ccId: number;
+  ccName: string;
+  ccAcronym: string;
 }
 
 const BackIcon = () => (
@@ -31,45 +48,284 @@ const PlusIcon = () => (
   </svg>
 );
 
-const CalendarIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-    <line x1="16" y1="2" x2="16" y2="6"></line>
-    <line x1="8" y1="2" x2="8" y2="6"></line>
-    <line x1="3" y1="10" x2="21" y2="10"></line>
-  </svg>
-);
-
 interface CCExpenseProps {
   onBack: () => void;
-  onNavigateToBillingCycle: () => void;
 }
 
-export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpenseProps) {
+export default function CCExpense({ onBack }: CCExpenseProps) {
   const [items, setItems] = useState<CCExpenseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Form States
+  const [allActiveCycles, setAllActiveCycles] = useState<BillingCycleItem[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
+  const [newExpense, setNewExpense] = useState({
+    ccRecId: 0,
+    date: new Date().toISOString().split('T')[0],
+    expenseDescription: '',
+    expenseValue: 0
+  });
+
+  const [ccDetailsMap, setCcDetailsMap] = useState<Record<number, string>>({});
+  const [cycleMap, setCycleMap] = useState<Record<number, string>>({});
+  const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<CCExpenseItem | null>(null);
+  const [editExpense, setEditExpense] = useState<CCExpenseItem | null>(null);
+  const [fetchingDetail, setFetchingDetail] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{type: 'update' | 'delete', message: string} | null>(null);
+
+  const [page, setPage] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(true);
+
+  const [searchFilters, setSearchFilters] = useState({ expenseDescription: '' });
+  const [tempFilters, setTempFilters] = useState({ expenseDescription: '' });
+
+  const ensureFreshToken = async (): Promise<string | null> => {
+    const username = localStorage.getItem('pfm_username');
+    const password = localStorage.getItem('pfm_password');
+    if (!username || !password) return null;
+
+    let token = localStorage.getItem('pfm_token') || '';
+    const tokenTime = Number(localStorage.getItem('pfm_token_time') || 0);
+    const isExpired = Date.now() - tokenTime > 1000 * 60 * 10; 
+
+    if (!token || isExpired) {
+      try {
+        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (authRes.ok) {
+          const authText = await authRes.text();
+          try {
+            const parsed = JSON.parse(authText);
+            token = parsed.data?.token || parsed.token || authText;
+          } catch (e) { token = authText; }
+          localStorage.setItem('pfm_token', token);
+          localStorage.setItem('pfm_token_time', Date.now().toString());
+        } else { return null; }
+      } catch (e) { return null; }
+    }
+    return token;
+  };
+
+  const fetchData = async (pageNumber = 0, ccRecId = selectedCycleId, filters = searchFilters) => {
+    if (!ccRecId) return;
+    setLoading(true);
+    if (pageNumber === 0) setItems([]); // Clear table immediately on cycle change or first page load
+    const token = await ensureFreshToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      let url = `${import.meta.env.PFM_BASE_URL}search/cc.record.expense/ccRecId/${ccRecId}?page=${pageNumber}&size=20&sortBy=ccExpId`;
+      if (filters.expenseDescription) {
+        url += `&expenseDescription=${filters.expenseDescription.replace(/ /g, '+')}`;
+      }
+
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const payload = json.data || json;
+        const content = payload.content || [];
+        setItems(content);
+        setTotalElements(payload.totalElements || 0);
+        setTotalPages(payload.totalPages || 1);
+        setIsLastPage(payload.last !== undefined ? payload.last : true);
+        setPage(pageNumber);
+      }
+    } catch (e) {
+      console.error('Error fetching expenses:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const promptUpdate = () => {
+    setConfirmDialog({ type: 'update', message: 'Are you sure you want to update this record?' });
+  };
+
+  const promptDelete = () => {
+    setConfirmDialog({ type: 'delete', message: 'This record will be permanently deleted. Continue?' });
+  };
+
+  const executeDelete = async () => {
+    setConfirmDialog(null);
+    if (!selectedExpense?.ccExpId) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/delete/${selectedExpense.ccExpId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Record deleted.' });
+        setIsDetailModalOpen(false);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Failed to delete.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
+  };
+
+  const executeUpdate = async () => {
+    setConfirmDialog(null);
+    if (!editExpense?.ccExpId) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+
+    try {
+      const username = localStorage.getItem('pfm_username') || 'jeff';
+      const { addedBy, ...cleanPayload } = editExpense; // User wants to change addedBy to updatedBy for update
+      const payload = { ...cleanPayload, updatedBy: username };
+
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/update/${editExpense.ccExpId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Record updated!' });
+        setIsEditing(false);
+        fetchExpenseDetail(editExpense.ccExpId);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Update failed.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
+  };
+
+  const fetchCcOptions = async () => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.data?.content || json.content || [];
+        const map: Record<number, string> = {};
+        content.forEach((c: CCDetail) => { map[c.ccId] = c.ccName; });
+        setCcDetailsMap(map);
+        return map;
+      }
+    } catch (e) { console.error('Error fetching cc options:', e); }
+    return {};
+  };
+
+  const fetchGlobalActiveCycles = async (namesMap: Record<number, string>) => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.recordTracker?page=0&size=100&sortBy=ccRecId`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.data?.content || json.content || [];
+        const activeOnly = content.filter((cy: BillingCycleItem) => cy.status === 'Active');
+        setAllActiveCycles(activeOnly);
+        
+        const newCycleMap: Record<number, string> = {};
+        activeOnly.forEach((cy: BillingCycleItem) => {
+          newCycleMap[cy.ccRecId] = `${namesMap[cy.ccId] || 'Card'} | ${cy.dateFrom} - ${cy.dateTo}`;
+        });
+        setCycleMap(newCycleMap);
+      }
+    } catch (e) { console.error('Error fetching global cycles:', e); }
+  };
+
+  const sanitizeInput = (val: string) => {
+    return val.replace(/[\\/;\%\$\*\!\`\~\-\-]/g, '');
+  };
 
   useEffect(() => {
-    fetchData();
+    const init = async () => {
+      const names = await fetchCcOptions();
+      await fetchGlobalActiveCycles(names);
+    };
+    init();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Dummy data
-    setItems([
-      { id: 1, ccName: 'Visa Gold', merchant: 'Amazon', amount: 120.50, date: '2026-04-10', status: 'Cleared' },
-      { id: 2, ccName: 'Mastercard Platinum', merchant: 'Netflix', amount: 15.99, date: '2026-04-09', status: 'Pending' },
-      { id: 3, ccName: 'BDO Elite', merchant: 'Steam', amount: 59.99, date: '2026-04-08', status: 'Cleared' },
-    ]);
-    
-    setLoading(false);
+  useEffect(() => {
+    if (selectedCycleId) {
+      fetchData(0, selectedCycleId, searchFilters);
+    }
+  }, [selectedCycleId, searchFilters]);
+
+  const handleCreate = async () => {
+    if (!newExpense.ccRecId || !newExpense.expenseDescription || newExpense.expenseValue <= 0) {
+      setResultDialog({ status: 'failed', message: 'Please complete all fields correctly.' });
+      return;
+    }
+    setIsCreating(true);
+    const token = await ensureFreshToken();
+    if (!token) { setIsCreating(false); return; }
+    try {
+      const username = localStorage.getItem('pfm_username') || 'jeff';
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/create/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...newExpense, addedBy: username })
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Expense recorded successfully!' });
+        setIsCreateModalOpen(false);
+        setNewExpense({
+          ccRecId: selectedCycleId || 0,
+          date: new Date().toISOString().split('T')[0],
+          expenseDescription: '',
+          expenseValue: 0
+        });
+        fetchData(0, selectedCycleId);
+      } else { setResultDialog({ status: 'failed', message: 'Failed to record expense.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Network error occurred.' }); }
+    finally { setIsCreating(false); }
   };
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
+
+  const fetchExpenseDetail = async (id: number) => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    setFetchingDetail(true);
+    setIsDetailModalOpen(true);
+    try {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.record.expense/ccExpId/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data || json;
+        const normalized = Array.isArray(data) ? data[0] : data;
+        setSelectedExpense(normalized);
+        setEditExpense(normalized);
+      }
+    } catch (e) {
+      console.error('Error fetching detail:', e);
+    } finally {
+      setFetchingDetail(false);
+    }
+  };
 
   return (
     <div className="app-container allocations-page">
@@ -84,17 +340,21 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           
           <div className="header-titles">
             <h1 className="allocations-title">CC Expense</h1>
-            <p className="allocations-subtitle">{items.length} TRANSACTIONS</p>
+            <p className="allocations-subtitle">
+              {selectedCycleId ? `${cycleMap[selectedCycleId] || 'Cycle'} (${totalElements} Records)` : 'No Cycle Selected'}
+            </p>
           </div>
           
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button 
-              className="premium-pill-btn" 
-              onClick={onNavigateToBillingCycle}
-            >
-              <CalendarIcon />
-              <span>Billing Cycle</span>
-            </button>
+            {selectedCycleId && (
+              <button 
+                className="premium-pill-btn" 
+                onClick={() => setIsInitialModalOpen(true)}
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                <span>Change Cycle</span>
+              </button>
+            )}
             <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
               <SearchIcon />
             </button>
@@ -103,56 +363,386 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       </section>
 
       <main className="allocations-main">
-        {loading ? (
-          <p style={{ textAlign: 'center', margin: '20px' }}>Loading dummy data...</p>
-        ) : items.length > 0 ? (
-          <div className="allocations-list" style={{ paddingBottom: '20px' }}>
-          {items.map((it, i) => (
-            <div key={it.id || i} className="allocation-card clickable-card">
-              <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>
-                {getInitial(it.merchant)}
-              </div>
-              <div className="alloc-info">
-                <h3 className="alloc-name">{it.merchant}</h3>
-                <p className="alloc-meta">
-                  {it.ccName} • {it.status}
-                </p>
-              </div>
-              <div className="alloc-date" style={{ fontWeight: 'bold' }}>
-                ${it.amount?.toFixed(2)}
-                <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 'normal' }}>{it.date}</div>
-              </div>
+        {!selectedCycleId ? (
+          <div className="empty-state-container" style={{ marginTop: '40px' }}>
+            <div className="empty-state-icon-box" onClick={() => setIsInitialModalOpen(true)} style={{ cursor: 'pointer' }}>
+               <div style={{ fontSize: '64px' }}>📅</div>
             </div>
-          ))}
+            <h3 className="empty-state-title">Select Billing Cycle</h3>
+            <p className="empty-state-text">Please select a billing cycle to view recorded expenses.</p>
+            <button className="primary-btn margin-top-md" onClick={() => setIsInitialModalOpen(true)}>Choose Cycle</button>
           </div>
         ) : (
-          <div className="empty-state-container">
-            <div className="empty-state-icon-box">
-              <div style={{ fontSize: '64px', opacity: 0.2 }}>💳</div>
-            </div>
-            <h3 className="empty-state-title">No Expenses Found</h3>
-            <p className="empty-state-text">
-              You haven't added any credit card expenses yet.
-            </p>
-          </div>
+          <>
+            {/* Filter Indicators */}
+            {Object.values(searchFilters).some(v => v !== '') && (
+              <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap', padding: '0 20px' }}>
+                {Object.entries(searchFilters).map(([k, v]) => v && (
+                  <div key={k} style={{ background: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e5e7eb' }}>
+                    <span style={{ fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase' }}>{k === 'expenseDescription' ? 'Merchant' : k}:</span>
+                    <span style={{ color: '#111827', fontWeight: 500 }}>{v as string}</span>
+                    <button 
+                      onClick={() => {
+                        setSearchFilters({ ...searchFilters, [k]: '' });
+                        setTempFilters({ ...tempFilters, [k]: '' });
+                      }} 
+                      style={{ border: 'none', background: '#f3f4f6', cursor: 'pointer', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b7280', transition: 'all 0.2s' }}
+                      onMouseOver={e => e.currentTarget.style.background = '#e5e7eb'}
+                      onMouseOut={e => e.currentTarget.style.background = '#f3f4f6'}
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {loading && items.length === 0 ? (
+              <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Fetching expenses...</p>
+            ) : items.length > 0 ? (
+              <div className="allocations-list" style={{ paddingBottom: '20px' }}>
+              {items.map((it, i) => (
+                <div key={it.ccExpId || i} className="allocation-card clickable-card" onClick={() => it.ccExpId && fetchExpenseDetail(it.ccExpId)}>
+                  <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>
+                    {getInitial(it.expenseDescription)}
+                  </div>
+                  <div className="alloc-info">
+                    <h3 className="alloc-name">{it.expenseDescription}</h3>
+                    <p className="alloc-meta">
+                      {cycleMap[it.ccRecId] || `Cycle #${it.ccRecId}`}
+                    </p>
+                  </div>
+                  <div className="alloc-date" style={{ fontWeight: 'bold' }}>
+                    ₱ {it.expenseValue?.toLocaleString()}
+                  </div>
+                </div>
+              ))}
+    
+              <div className="pagination-container">
+                <button className="pagination-btn" onClick={() => fetchData(page - 1)} disabled={page === 0 || loading}>Prev</button>
+                <div className="pagination-numbers">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const showPage = totalPages <= 5 || (idx === 0 || idx === totalPages - 1 || Math.abs(page - idx) <= 1);
+                    if (!showPage && idx === 1) return <span key={idx}>...</span>;
+                    if (!showPage && idx === totalPages - 2) return <span key={idx}>...</span>;
+                    if (!showPage) return null;
+                    return (
+                      <button key={idx} className={`pagination-number ${page === idx ? 'active' : ''}`} onClick={() => fetchData(idx)} disabled={loading}>{idx + 1}</button>
+                    );
+                  })}
+                </div>
+                <button className="pagination-btn" onClick={() => fetchData(page + 1)} disabled={isLastPage || loading}>Next</button>
+              </div>
+              </div>
+            ) : (
+              <div className="empty-state-container">
+                <div className="empty-state-icon-box">
+                  <div style={{ fontSize: '64px', opacity: 0.2 }}>💳</div>
+                </div>
+                <h3 className="empty-state-title">No Expenses Found</h3>
+                <p className="empty-state-text">
+                  {Object.values(searchFilters).some(v => v !== '') ? 'No records match your search criteria.' : "You haven't added any credit card expenses yet."}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
-      <button className="fab-btn" onClick={() => alert('Dummy Create Action')}>
+      <button className="fab-btn" onClick={() => { 
+        if (!selectedCycleId) {
+          setIsInitialModalOpen(true);
+        } else {
+          setNewExpense(prev => ({ ...prev, ccRecId: selectedCycleId }));
+          setIsCreateModalOpen(true); 
+        }
+      }}>
         <PlusIcon />
       </button>
+
+      {/* Initial Cycle Selection Modal */}
+      {isInitialModalOpen && (
+        <div className="modal-overlay" onClick={() => selectedCycleId && setIsInitialModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            <h2 className="form-title" style={{ textAlign: 'center' }}>{selectedCycleId ? 'Switch Billing Period' : 'Select Billing Period'}</h2>
+            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
+              {selectedCycleId ? 'Select a different period to view its records.' : 'Choose a cycle to view and record expenses.'}
+            </p>
+            <div className="login-form">
+              <div className="input-group">
+                <label>Active Billing Cycles</label>
+                <select 
+                  className="dropdown-select" 
+                  value={selectedCycleId || ''} 
+                  onChange={e => {
+                    const id = Number(e.target.value);
+                    if (id) {
+                      setSelectedCycleId(id);
+                      setIsInitialModalOpen(false);
+                    }
+                  }}
+                >
+                  <option value="">{selectedCycleId ? 'Keep current selection...' : 'Choose a period...'}</option>
+                  {allActiveCycles.map(cy => (
+                    <option key={cy.ccRecId} value={cy.ccRecId}>
+                      {ccDetailsMap[cy.ccId] || 'Card'} | {cy.dateFrom} - {cy.dateTo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedCycleId ? (
+                <button 
+                  className="secondary-btn margin-top-md" 
+                  style={{ width: '100%' }} 
+                  onClick={() => setIsInitialModalOpen(false)}
+                >
+                  Close
+                </button>
+              ) : (
+                <button 
+                  className="secondary-btn margin-top-md" 
+                  style={{ width: '100%', borderColor: '#6b7280', color: '#6b7280' }} 
+                  onClick={onBack}
+                >
+                  Back to Dashboard
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {isCreateModalOpen && (
+        <div className="modal-overlay" onClick={() => !isCreating && setIsCreateModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <h2 className="form-title">Record CC Expense</h2>
+            <div className="login-form">
+              
+              <div className="input-group">
+                <label>Billing Cycle</label>
+                <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '14px', fontWeight: 600 }}>
+                  {cycleMap[newExpense.ccRecId] || 'Cycle Selector'}
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>Date</label>
+                <input 
+                  type="date" 
+                  value={newExpense.date} 
+                  onChange={e => setNewExpense({...newExpense, date: e.target.value})} 
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Merchant / Description</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Amazon Purchase" 
+                  value={newExpense.expenseDescription}
+                  onChange={e => setNewExpense({...newExpense, expenseDescription: sanitizeInput(e.target.value)})}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Amount (Value)</label>
+                <input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={newExpense.expenseValue || ''}
+                  onChange={e => setNewExpense({...newExpense, expenseValue: Number(e.target.value)})}
+                />
+              </div>
+
+              <button 
+                type="button" 
+                className="primary-btn margin-top-lg" 
+                onClick={handleCreate}
+                disabled={isCreating}
+              >
+                {isCreating ? 'Recording...' : 'Record Expense'}
+              </button>
+              <button 
+                type="button" 
+                className="secondary-btn margin-top-sm" 
+                style={{ width: '100%', borderColor: 'transparent' }} 
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Result Dialog */}
+      {resultDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content" style={{ textAlign: 'center', maxWidth: '400px' }}>
+            <div className="success-icon" style={{ backgroundColor: resultDialog.status === 'success' ? '#2ecc71' : '#ef4444', margin: '0 auto 20px' }}>
+              {resultDialog.status === 'success' ? (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              ) : (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              )}
+            </div>
+            <h2 className="form-title" style={{ marginBottom: '8px' }}>{resultDialog.status === 'success' ? 'Recorded!' : 'Error!'}</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{resultDialog.message}</p>
+            <button className="primary-btn" style={{ width: '100%' }} onClick={() => setResultDialog(null)}>Okay</button>
+          </div>
+        </div>
+      )}
 
       {/* Search Modal */}
       {isSearchModalOpen && (
         <div className="modal-overlay" onClick={() => setIsSearchModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className="form-title">Search & Filters (Dummy)</h2>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 className="form-title">Search Merchant</h2>
             <div className="login-form">
               <div className="input-group">
-                <label>Merchant</label>
-                <input type="text" placeholder="e.g. Amazon" />
+                <label>Merchant / Description</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Amazon" 
+                  value={tempFilters.expenseDescription}
+                  onChange={e => setTempFilters({ expenseDescription: sanitizeInput(e.target.value) })}
+                />
               </div>
-              <button className="primary-btn margin-top-lg" onClick={() => setIsSearchModalOpen(false)}>Apply Search</button>
+              <button 
+                className="primary-btn margin-top-lg" 
+                onClick={() => {
+                  setSearchFilters({ ...tempFilters });
+                  setIsSearchModalOpen(false);
+                }}
+              >
+                Apply Search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && (
+        <div className="modal-overlay" onClick={() => !isEditing && setIsDetailModalOpen(false)}>
+          <div className="modal-content alloc-detail-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+            {fetchingDetail ? (
+              <p style={{ textAlign: 'center', padding: '40px' }}>Loading detail...</p>
+            ) : selectedExpense ? (
+              <div className="alloc-detail-content">
+                {isEditing ? (
+                  <div className="login-form">
+                    <h2 className="form-title">Edit Expense</h2>
+                    
+                    <div className="input-group">
+                      <label>Merchant / Description</label>
+                      <input 
+                        type="text" 
+                        value={editExpense?.expenseDescription || ''} 
+                        onChange={e => setEditExpense(prev => ({ ...prev!, expenseDescription: sanitizeInput(e.target.value) }))}
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label>Amount (₱)</label>
+                      <input 
+                        type="number" 
+                        value={editExpense?.expenseValue || 0} 
+                        onChange={e => setEditExpense(prev => ({ ...prev!, expenseValue: Number(e.target.value) }))}
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label>Date</label>
+                      <input 
+                        type="date" 
+                        value={editExpense?.date || ''} 
+                        onChange={e => setEditExpense(prev => ({ ...prev!, date: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label>Billing Period</label>
+                      <select 
+                        className="dropdown-select" 
+                        value={editExpense?.ccRecId || ''} 
+                        onChange={e => setEditExpense(prev => ({ ...prev!, ccRecId: Number(e.target.value) }))}
+                      >
+                        {allActiveCycles.map(cy => (
+                          <option key={cy.ccRecId} value={cy.ccRecId}>
+                            {ccDetailsMap[cy.ccId] || 'Card'} | {cy.dateFrom} - {cy.dateTo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                      <button className="primary-btn" style={{ flex: 1 }} onClick={promptUpdate}>Save</button>
+                      <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={promptDelete}>Delete</button>
+                    </div>
+                    <button className="secondary-btn margin-top-sm" style={{ width: '100%', borderColor: 'transparent' }} onClick={() => setIsEditing(false)}>Cancel</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="alloc-detail-header">
+                      <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
+                        {getInitial(selectedExpense.expenseDescription)}
+                      </div>
+                      <h2>{selectedExpense.expenseDescription}</h2>
+                      <p style={{ color: '#6b7280', fontSize: '14px' }}>Expense Details</p>
+                    </div>
+
+                    <div className="detail-grid">
+                      <div className="detail-group">
+                        <label>Amount Paid</label>
+                        <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
+                          ₱ {selectedExpense.expenseValue?.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Transaction Date</label>
+                        <p>{selectedExpense.date}</p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Billing Period</label>
+                        <p>{cycleMap[selectedExpense.ccRecId] || 'Unknown Cycle'}</p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Attribution</label>
+                        <p>Added by @{selectedExpense.addedBy} {selectedExpense.dateAdded ? `on ${selectedExpense.dateAdded.split(' ')[0]}` : ''}</p>
+                        {selectedExpense.updatedBy && <p style={{ fontSize: '11px', marginTop: '4px' }}>Last updated by @{selectedExpense.updatedBy}</p>}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                      <button className="primary-btn" style={{ flex: 1 }} onClick={() => setIsEditing(true)}>Edit Record</button>
+                      <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsDetailModalOpen(false)}>Close</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p style={{ textAlign: 'center', padding: '40px' }}>Detail not found.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <h2 className="form-title">Confirm Action</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ flex: 1, backgroundColor: confirmDialog.type === 'delete' ? '#ef4444' : '#10b981' }} 
+                onClick={() => confirmDialog.type === 'update' ? executeUpdate() : executeDelete()}
+              >
+                Proceed
+              </button>
+              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog(null)}>Cancel</button>
             </div>
           </div>
         </div>
