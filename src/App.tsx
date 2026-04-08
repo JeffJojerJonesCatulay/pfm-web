@@ -7,11 +7,13 @@ import Tracker from './Tracker';
 import SalaryRecord from './SalaryRecord';
 import CCDetails from './CCDetails';
 import ConnectedApps from './ConnectedApps';
+import CCExpense from './CCExpense';
+import BillingCycle from './BillingCycle';
 import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle'>('dashboard');
 
   return (
     <>
@@ -28,6 +30,10 @@ function App() {
           <CCDetails onBack={() => setCurrentView('dashboard')} onNavigateToConnectedApps={() => setCurrentView('connectedApps')} />
         ) : currentView === 'connectedApps' ? (
           <ConnectedApps onBack={() => setCurrentView('ccdetails')} />
+        ) : currentView === 'ccexpense' ? (
+          <CCExpense onBack={() => setCurrentView('dashboard')} onNavigateToBillingCycle={() => setCurrentView('billingCycle')} />
+        ) : currentView === 'billingCycle' ? (
+          <BillingCycle onBack={() => setCurrentView('ccexpense')} />
         ) : (
           <Dashboard 
             onLogout={() => setIsLoggedIn(false)} 
@@ -35,6 +41,7 @@ function App() {
             onNavigateToWantList={() => setCurrentView('wantlist')}
             onNavigateToTracker={() => setCurrentView('tracker')}
             onNavigateToCCDetails={() => setCurrentView('ccdetails')}
+            onNavigateToCCExpense={() => setCurrentView('ccexpense')}
           />
         )
       ) : (
