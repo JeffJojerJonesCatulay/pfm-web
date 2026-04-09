@@ -75,8 +75,9 @@ export default function WantList({ onBack }: WantListProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editItem, setEditItem] = useState<Partial<WantListItem>>({});
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/\-;$%*!~]/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   const ensureFreshToken = async (): Promise<string | null> => {
@@ -183,26 +184,39 @@ export default function WantList({ onBack }: WantListProps) {
   };
 
   const handleCreate = async () => {
+    if (!newItem.item || !newItem.estimatedPrice || !newItem.dateWanted) {
+      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Item, Estimated Price, and Date Wanted.' });
+      return;
+    }
+
+    if (containsProhibitedChars(newItem.item) || containsProhibitedChars(newItem.remarks)) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
+      return;
+    }
+
     const token = await ensureFreshToken();
     if (!token) return;
     setIsCreating(true);
+
+    const username = localStorage.getItem('pfm_username') || 'system';
+    const payload = {
+      item: newItem.item,
+      estimatedPrice: Number(newItem.estimatedPrice),
+      dateWanted: newItem.dateWanted,
+      afford: newItem.afford,
+      remarks: newItem.remarks,
+      status: newItem.status,
+      addedBy: username
+    };
+
     try {
-      const username = localStorage.getItem('pfm_username') || 'system';
       const res = await fetch(API_URLS.WANT_LIST.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          item: sanitizeInput(newItem.item),
-          estimatedPrice: Number(newItem.estimatedPrice),
-          dateWanted: newItem.dateWanted,
-          afford: newItem.afford,
-          remarks: sanitizeInput(newItem.remarks),
-          status: newItem.status,
-          addedBy: username
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -225,13 +239,36 @@ export default function WantList({ onBack }: WantListProps) {
     const token = await ensureFreshToken();
     if (!selectedItem || !selectedItem.id || !token) return;
 
+    if (containsProhibitedChars(editItem.item || '') || containsProhibitedChars(editItem.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     const updatedFields: any = {};
-    if (editItem.item !== selectedItem.item) updatedFields.item = sanitizeInput(editItem.item || '');
-    if (Number(editItem.estimatedPrice) !== selectedItem.estimatedPrice) updatedFields.estimatedPrice = Number(editItem.estimatedPrice);
-    if (editItem.dateWanted !== selectedItem.dateWanted) updatedFields.dateWanted = editItem.dateWanted;
+    if (editItem.item !== selectedItem.item) {
+      if (!editItem.item) {
+        setResultDialog({ status: 'failed', message: 'Item Name is mandatory.' });
+        return;
+      }
+      updatedFields.item = editItem.item;
+    }
+    if (editItem.estimatedPrice !== selectedItem.estimatedPrice) {
+      if (editItem.estimatedPrice === undefined || editItem.estimatedPrice === null || editItem.estimatedPrice === 0) {
+        setResultDialog({ status: 'failed', message: 'Estimated Price is mandatory.' });
+        return;
+      }
+      updatedFields.estimatedPrice = Number(editItem.estimatedPrice);
+    }
+    if (editItem.dateWanted !== selectedItem.dateWanted) {
+      if (!editItem.dateWanted) {
+        setResultDialog({ status: 'failed', message: 'Date Wanted is mandatory.' });
+        return;
+      }
+      updatedFields.dateWanted = editItem.dateWanted;
+    }
     if (editItem.afford !== selectedItem.afford) updatedFields.afford = editItem.afford;
-    if (editItem.remarks !== selectedItem.remarks) updatedFields.remarks = sanitizeInput(editItem.remarks || '');
     if (editItem.status !== selectedItem.status) updatedFields.status = editItem.status;
+    if (editItem.remarks !== selectedItem.remarks) updatedFields.remarks = editItem.remarks;
     
     if (Object.keys(updatedFields).length === 0) return;
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';

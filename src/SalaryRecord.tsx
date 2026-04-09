@@ -153,6 +153,10 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
   };
 
   const handleCreate = async () => {
+    if (!newItem.salary || newItem.salary === '0' || !newItem.date) {
+      setResultDialog({ status: 'failed', message: 'Please provide both the Salary Amount and Date.' });
+      return;
+    }
     const token = await ensureFreshToken();
     if (!token) return;
     setIsCreating(true);
@@ -177,8 +181,20 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     const token = await ensureFreshToken();
     if (!selectedItem || !selectedItem.salaryId || !token) return;
     const updatedFields: any = {};
-    if (editItem.salary !== selectedItem.salary) updatedFields.salary = Number(editItem.salary);
-    if (editItem.date !== selectedItem.date) updatedFields.date = editItem.date;
+    if (editItem.salary !== selectedItem.salary) {
+      if (!editItem.salary) {
+        setResultDialog({ status: 'failed', message: 'Salary amount is mandatory.' });
+        return;
+      }
+      updatedFields.salary = Number(editItem.salary);
+    }
+    if (editItem.date !== selectedItem.date) {
+      if (!editItem.date) {
+        setResultDialog({ status: 'failed', message: 'Date is mandatory.' });
+        return;
+      }
+      updatedFields.date = editItem.date;
+    }
     if (editItem.status !== selectedItem.status) updatedFields.status = editItem.status;
     if (Object.keys(updatedFields).length === 0) return;
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';

@@ -71,8 +71,9 @@ export default function Allocations({ onBack }: AllocationsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editItem, setEditItem] = useState<Partial<AllocationItem>>({});
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/\-;$%*!~]/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   const ensureFreshToken = async (): Promise<string | null> => {
@@ -164,17 +165,29 @@ export default function Allocations({ onBack }: AllocationsProps) {
     const token = await ensureFreshToken();
     if (!token) return;
     setIsCreating(true);
+
+    if (!newAllocation.allocation || !newAllocation.type) {
+      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Allocation Name and Type.' });
+      setIsCreating(false);
+      return;
+    }
+
+    if (containsProhibitedChars(newAllocation.allocation) || containsProhibitedChars(newAllocation.type) || containsProhibitedChars(newAllocation.description)) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
+      setIsCreating(false);
+      return;
+    }
+
     try {
-      const username = localStorage.getItem('pfm_username') || 'system';
       const res = await fetch(API_URLS.ALLOCATIONS.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 
-          allocation: sanitizeInput(newAllocation.allocation), 
+          allocation: newAllocation.allocation, 
           type: newAllocation.type, 
           status: newAllocation.status, 
-          description: sanitizeInput(newAllocation.description),
-          addedBy: username 
+          description: newAllocation.description,
+          addedBy: localStorage.getItem('pfm_username') || 'system'
         })
       });
       if (res.ok) {
@@ -191,11 +204,28 @@ export default function Allocations({ onBack }: AllocationsProps) {
     const token = await ensureFreshToken();
     if (!selectedAllocation || !selectedAllocation.allocId || !token) return;
 
+    if (containsProhibitedChars(editItem.allocation || '') || containsProhibitedChars(editItem.type || '') || containsProhibitedChars(editItem.description || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     const updatedFields: any = {};
-    if (editItem.allocation !== selectedAllocation.allocation) updatedFields.allocation = sanitizeInput(editItem.allocation || '');
-    if (editItem.type !== selectedAllocation.type) updatedFields.type = editItem.type;
+    if (editItem.allocation !== selectedAllocation.allocation) {
+      if (!editItem.allocation) {
+        setResultDialog({ status: 'failed', message: 'Allocation Name is mandatory.' });
+        return;
+      }
+      updatedFields.allocation = editItem.allocation;
+    }
+    if (editItem.type !== selectedAllocation.type) {
+      if (!editItem.type) {
+        setResultDialog({ status: 'failed', message: 'Type is mandatory.' });
+        return;
+      }
+      updatedFields.type = editItem.type;
+    }
     if (editItem.status !== selectedAllocation.status) updatedFields.status = editItem.status;
-    if (editItem.description !== selectedAllocation.description) updatedFields.description = sanitizeInput(editItem.description || '');
+    if (editItem.description !== selectedAllocation.description) updatedFields.description = editItem.description || '';
     
     if (Object.keys(updatedFields).length === 0) return;
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';

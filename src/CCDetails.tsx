@@ -62,10 +62,10 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
   const [editItem, setEditItem] = useState<Partial<CCDetailItem>>({});
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [showConfirm, setShowConfirm] = useState<{ id: number; show: boolean }>({ id: 0, show: false });
   const [isSearching, setIsSearching] = useState(false);
   const [searchTerms, setSearchTerms] = useState({ ccName: '', ccLastDigit: '', ccAcronym: '' });
   const [tempSearchTerms, setTempSearchTerms] = useState({ ccName: '', ccLastDigit: '', ccAcronym: '' });
+  const [confirmDialog, setConfirmDialog] = useState<{ type: 'update' | 'delete', message: string, id?: number } | null>(null);
   
   const [newItem, setNewItem] = useState<CCDetailItem>({
     ccName: '',
@@ -89,8 +89,9 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     fetchData(0, false);
   }, [searchTerms, isSearching]);
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/;\%\$\*\!\`\~]|--/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   const ensureFreshToken = async (): Promise<string | null> => {
@@ -175,10 +176,18 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     const token = await ensureFreshToken();
     if (!token) return;
 
+    if (!newItem.ccName || !newItem.ccLastDigit) {
+      setResultDialog({ status: 'failed', message: 'Card Name and Last 4 Digits are mandatory.' });
+      return;
+    }
+
+    if (containsProhibitedChars(newItem.ccName) || containsProhibitedChars(newItem.ccAcronym || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
+      return;
+    }
+
     const payload = {
-      ccName: sanitizeInput(newItem.ccName || ''),
-      ccAcronym: sanitizeInput(newItem.ccAcronym || ''),
-      ccLastDigit: sanitizeInput(newItem.ccLastDigit || ''),
+      ...newItem,
       addedBy: username
     };
 
@@ -199,16 +208,24 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     } catch (e) { setResultDialog({ status: 'failed', message: 'Network error occurred.' }); }
   };
 
-  const handleUpdate = async () => {
+  const executeUpdate = async () => {
+    setConfirmDialog(null);
     if (!editItem.ccId) return;
     const token = await ensureFreshToken();
     if (!token) return;
 
+    if (!editItem.ccName || !editItem.ccLastDigit) {
+      setResultDialog({ status: 'failed', message: 'Card Name and Last 4 Digits are mandatory.' });
+      return;
+    }
+
+    if (containsProhibitedChars(editItem.ccName || '') || containsProhibitedChars(editItem.ccAcronym || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     const payload = {
-      ccId: editItem.ccId,
-      ccName: sanitizeInput(editItem.ccName || ''),
-      ccAcronym: sanitizeInput(editItem.ccAcronym || ''),
-      ccLastDigit: sanitizeInput(editItem.ccLastDigit || ''),
+      ...editItem,
       updateBy: username
     };
 
@@ -229,7 +246,8 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     } catch (e) { setResultDialog({ status: 'failed', message: 'Network error occurred.' }); }
   };
 
-  const handleDelete = async (id: number) => {
+  const executeDelete = async (id: number) => {
+    setConfirmDialog(null);
     const token = await ensureFreshToken();
     if (!token) return;
 
@@ -241,7 +259,6 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Credit card record has been removed.' });
         setIsModalOpen(false);
-        setShowConfirm({ id: 0, show: false });
         fetchData(0, false);
       } else {
         setResultDialog({ status: 'failed', message: 'Failed to remove record.' });
@@ -381,7 +398,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
                   setIsEditing(true);
                   setIsModalOpen(false);
                 }}>Edit Card</button>
-                <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => setShowConfirm({ id: selectedItem.ccId!, show: true })}>Remove</button>
+                <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => setConfirmDialog({ type: 'delete', message: 'Are you sure you want to remove this credit card record? This action cannot be undone.', id: selectedItem.ccId })}>Remove</button>
               </div>
             </div>
           </div>
@@ -430,7 +447,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
                 <label>Last 4 Digits</label>
                 <input type="text" maxLength={4} value={editItem.ccLastDigit} onChange={e => setEditItem({...editItem, ccLastDigit: e.target.value})} />
               </div>
-              <button type="button" className="primary-btn margin-top-lg" onClick={handleUpdate}>Update Card</button>
+              <button type="button" className="primary-btn margin-top-lg" onClick={() => setConfirmDialog({ type: 'update', message: 'Are you sure you want to save these updated changes to this credit card?' })}>Update Card</button>
             </form>
           </div>
         </div>
@@ -460,8 +477,8 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
       )}
 
       {/* Confirmation Dialog */}
-      {showConfirm.show && (
-        <div className="modal-overlay" onClick={() => setShowConfirm({ id: 0, show: false })}>
+      {confirmDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
           <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '40px 20px' }}>
             <div className="success-icon" style={{ backgroundColor: '#f39c12', margin: '0 auto 20px' }}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -471,10 +488,13 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
               </svg>
             </div>
             <h2 className="form-title" style={{ marginBottom: '8px' }}>Confirm Action</h2>
-            <p style={{ color: '#6b7280', marginBottom: '24px' }}>Are you sure you want to remove this credit card record? This action cannot be undone.</p>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{confirmDialog.message}</p>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="primary-btn" style={{ flex: 1, background: '#ef4444' }} onClick={() => handleDelete(showConfirm.id)}>Delete</button>
-              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setShowConfirm({ id: 0, show: false })}>Cancel</button>
+              <button className="primary-btn" style={{ flex: 1, background: confirmDialog.type === 'delete' ? '#ef4444' : undefined }} onClick={() => {
+                if (confirmDialog.type === 'update') executeUpdate();
+                if (confirmDialog.type === 'delete' && confirmDialog.id) executeDelete(confirmDialog.id);
+              }}>Yes, Confirm</button>
+              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -488,15 +508,15 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
             <div className="login-form">
               <div className="input-group">
                 <label>Credit Card Name</label>
-                <input type="text" placeholder="e.g. Visa Gold" value={tempSearchTerms.ccName} onChange={e => setTempSearchTerms({...tempSearchTerms, ccName: sanitizeInput(e.target.value)})} list="cc-suggestions" />
+                <input type="text" placeholder="e.g. Visa Gold" value={tempSearchTerms.ccName} onChange={e => setTempSearchTerms({...tempSearchTerms, ccName: e.target.value})} list="cc-suggestions" />
               </div>
               <div className="input-group">
                 <label>CC Acronym</label>
-                <input type="text" placeholder="e.g. BDO, BPI" value={tempSearchTerms.ccAcronym} onChange={e => setTempSearchTerms({...tempSearchTerms, ccAcronym: sanitizeInput(e.target.value)})} />
+                <input type="text" placeholder="e.g. BDO, BPI" value={tempSearchTerms.ccAcronym} onChange={e => setTempSearchTerms({...tempSearchTerms, ccAcronym: e.target.value})} />
               </div>
               <div className="input-group">
                 <label>Last 4 Digits</label>
-                <input type="text" placeholder="e.g. 1234" maxLength={4} value={tempSearchTerms.ccLastDigit} onChange={e => setTempSearchTerms({...tempSearchTerms, ccLastDigit: sanitizeInput(e.target.value)})} />
+                <input type="text" placeholder="e.g. 1234" maxLength={4} value={tempSearchTerms.ccLastDigit} onChange={e => setTempSearchTerms({...tempSearchTerms, ccLastDigit: e.target.value})} />
               </div>
               <button className="primary-btn margin-top-lg" onClick={handleSearch}>Apply Search</button>
               {isSearching && <button className="secondary-btn" style={{ width: '100%', marginTop: '10px' }} onClick={clearSearch}>Clear Filter</button>}

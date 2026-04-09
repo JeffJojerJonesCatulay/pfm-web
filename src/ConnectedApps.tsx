@@ -126,8 +126,9 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     fetchCCOptions();
   }, []);
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/;\%\$\*\!\`\~]|--/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   const fetchData = async (pageNumber: number, append: boolean) => {
@@ -197,17 +198,27 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   };
 
   const handleCreate = async () => {
+    if (!newItem.ccId || !newItem.connectedApp || !newItem.amount || !newItem.date) {
+      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Card, App Name, Amount, and Date.' });
+      return;
+    }
+
+    if (containsProhibitedChars(newItem.connectedApp) || containsProhibitedChars(newItem.subscription) || containsProhibitedChars(newItem.remarks)) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
+      return;
+    }
+
     const token = await ensureFreshToken();
-    if (!token || !newItem.ccId) return;
+    if (!token) return;
 
     const payload = {
       ccId: Number(newItem.ccId),
-      connectedApp: sanitizeInput(newItem.connectedApp),
-      subscription: sanitizeInput(newItem.subscription),
+      connectedApp: newItem.connectedApp,
+      subscription: newItem.subscription,
       autoDebit: newItem.autoDebit,
       amount: Number(newItem.amount),
       date: newItem.date,
-      remarks: sanitizeInput(newItem.remarks),
+      remarks: newItem.remarks,
       addedBy: username
     };
 
@@ -231,18 +242,28 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   const executeUpdate = async () => {
     setConfirmDialog(null);
     if (!editItem.id) return;
+    if (!editItem.ccId || !editItem.connectedApp || !editItem.amount || !editItem.date) {
+      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Card, App Name, Amount, and Date.' });
+      return;
+    }
+
+    if (containsProhibitedChars(editItem.connectedApp || '') || containsProhibitedChars(editItem.subscription || '') || containsProhibitedChars(editItem.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     const token = await ensureFreshToken();
     if (!token) return;
 
     const payload = {
       id: editItem.id,
       ccId: Number(editItem.ccId),
-      connectedApp: sanitizeInput(editItem.connectedApp || ''),
-      subscription: sanitizeInput(editItem.subscription || ''),
+      connectedApp: editItem.connectedApp || '',
+      subscription: editItem.subscription || '',
       autoDebit: editItem.autoDebit,
       amount: Number(editItem.amount),
       date: editItem.date,
-      remarks: sanitizeInput(editItem.remarks || ''),
+      remarks: editItem.remarks || '',
       updateBy: username
     };
 
@@ -581,11 +602,11 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
             <div className="login-form">
               <div className="input-group">
                 <label>App Name</label>
-                <input type="text" placeholder="e.g. Maya" value={tempSearchTerms.connectedApp} onChange={e => setTempSearchTerms({...tempSearchTerms, connectedApp: sanitizeInput(e.target.value)})} />
+                <input type="text" placeholder="e.g. Maya" value={tempSearchTerms.connectedApp} onChange={e => setTempSearchTerms({...tempSearchTerms, connectedApp: e.target.value})} />
               </div>
               <div className="input-group">
                 <label>Subscription Plan</label>
-                <input type="text" placeholder="e.g. Premium" value={tempSearchTerms.subscription} onChange={e => setTempSearchTerms({...tempSearchTerms, subscription: sanitizeInput(e.target.value)})} />
+                <input type="text" placeholder="e.g. Premium" value={tempSearchTerms.subscription} onChange={e => setTempSearchTerms({...tempSearchTerms, subscription: e.target.value})} />
               </div>
               <div className="input-group">
                 <label>Auto-Debit Status</label>

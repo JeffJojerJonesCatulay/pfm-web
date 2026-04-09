@@ -12,6 +12,7 @@ interface CCExpenseItem {
   dateAdded?: string;
   updateDate?: string;
   updatedBy?: string;
+  remarks?: string;
 }
 
 interface BillingCycleItem {
@@ -26,6 +27,7 @@ interface CCDetail {
   ccId: number;
   ccName: string;
   ccAcronym: string;
+  ccLastDigit?: string;
 }
 
 const BackIcon = () => (
@@ -77,10 +79,11 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     ccRecId: 0,
     date: new Date().toISOString().split('T')[0],
     expenseDescription: '',
-    expenseValue: 0
+    expenseValue: 0,
+    remarks: ''
   });
 
-  const [ccDetailsMap, setCcDetailsMap] = useState<Record<number, string>>({});
+  const [ccDetailsMap, setCcDetailsMap] = useState<Record<number, CCDetail>>({});
   const [cycleMap, setCycleMap] = useState<Record<number, string>>({});
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
 
@@ -242,10 +245,23 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     const token = await ensureFreshToken();
     if (!token) return;
 
+    if (!editExpense || !editExpense.expenseDescription || !editExpense.expenseValue || !editExpense.date) {
+      setResultDialog({ status: 'failed', message: 'Description, Amount, and Date are mandatory.' });
+      return;
+    }
+
+    if (containsProhibitedChars(editExpense.expenseDescription || '') || containsProhibitedChars(editExpense.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     try {
       const username = localStorage.getItem('pfm_username') || 'jeff';
-      const { addedBy, ...cleanPayload } = editExpense; // User wants to change addedBy to updatedBy for update
-      const payload = { ...cleanPayload, updatedBy: username };
+      const { addedBy, ...cleanPayload } = editExpense;
+      const payload = { 
+        ...cleanPayload, 
+        updatedBy: username 
+      };
 
       const res = await fetch(API_URLS.CC_EXPENSE.UPDATE(editExpense.ccExpId), {
         method: 'PUT',
@@ -276,8 +292,8 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       if (res.ok) {
         const json = await res.json();
         const content = json.data?.content || json.content || [];
-        const map: Record<number, string> = {};
-        content.forEach((c: CCDetail) => { map[c.ccId] = c.ccName; });
+        const map: Record<number, CCDetail> = {};
+        content.forEach((c: CCDetail) => { map[c.ccId] = c; });
         setCcDetailsMap(map);
         return map;
       }
@@ -285,7 +301,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     return {};
   };
 
-  const fetchGlobalActiveCycles = async (namesMap: Record<number, string>) => {
+  const fetchGlobalActiveCycles = async (namesMap: Record<number, CCDetail>) => {
     const token = await ensureFreshToken();
     if (!token) return;
     try {
@@ -300,7 +316,8 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
         
         const newCycleMap: Record<number, string> = {};
         activeOnly.forEach((cy: BillingCycleItem) => {
-          const cardName = namesMap && namesMap[cy.ccId] ? namesMap[cy.ccId] : 'Card';
+          const card = namesMap && namesMap[cy.ccId] ? namesMap[cy.ccId] : null;
+          const cardName = card ? card.ccName : 'Card';
           newCycleMap[cy.ccRecId] = `${cardName} | ${cy.dateFrom} - ${cy.dateTo}`;
         });
         setCycleMap(newCycleMap);
@@ -308,8 +325,9 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     } catch (e) { console.error('Error fetching global cycles:', e); }
   };
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/;\%\$\*\!\`\~\-\-]/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   useEffect(() => {
@@ -327,8 +345,13 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
   }, [selectedCycleId, searchFilters]);
 
   const handleCreate = async () => {
-    if (!newExpense.ccRecId || !newExpense.expenseDescription || newExpense.expenseValue <= 0) {
-      setResultDialog({ status: 'failed', message: 'Please complete all fields correctly.' });
+    if (!newExpense.ccRecId || !newExpense.expenseDescription || !newExpense.expenseValue || !newExpense.date) {
+      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Cycle, Description, Amount, and Date.' });
+      return;
+    }
+
+    if (containsProhibitedChars(newExpense.expenseDescription) || containsProhibitedChars(newExpense.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
       return;
     }
     setIsCreating(true);
@@ -351,7 +374,8 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           ccRecId: selectedCycleId || 0,
           date: new Date().toISOString().split('T')[0],
           expenseDescription: '',
-          expenseValue: 0
+          expenseValue: 0,
+          remarks: ''
         });
         fetchData(0, selectedCycleId);
       } else { setResultDialog({ status: 'failed', message: 'Failed to record expense.' }); }
@@ -581,7 +605,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   <option value="">{selectedCycleId ? 'Keep current selection...' : 'Choose a period...'}</option>
                   {allActiveCycles.map(cy => (
                     <option key={cy.ccRecId} value={cy.ccRecId}>
-                      {ccDetailsMap[cy.ccId] || 'Card'} | {cy.dateFrom} - {cy.dateTo}
+                      {ccDetailsMap[cy.ccId]?.ccName || 'Card'} | {cy.dateFrom} - {cy.dateTo}
                     </option>
                   ))}
                 </select>
@@ -638,18 +662,27 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                     type="text" 
                     placeholder="e.g. Amazon Purchase" 
                     value={newExpense.expenseDescription}
-                    onChange={e => setNewExpense({...newExpense, expenseDescription: sanitizeInput(e.target.value)})}
+                    onChange={e => setNewExpense({...newExpense, expenseDescription: e.target.value})}
                     list="merchant-suggestions"
                   />
               </div>
 
               <div className="input-group">
-                <label>Amount (Value)</label>
+                <label>Amount (₱)</label>
                 <input 
                   type="number" 
                   placeholder="0.00" 
-                  value={newExpense.expenseValue || ''}
+                  value={newExpense.expenseValue}
                   onChange={e => setNewExpense({...newExpense, expenseValue: Number(e.target.value)})}
+                />
+              </div>
+              <div className="input-group">
+                <label>Remarks</label>
+                <textarea 
+                  placeholder="Additional notes..." 
+                  value={newExpense.remarks} 
+                  onChange={e => setNewExpense({...newExpense, remarks: e.target.value})}
+                  style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
                 />
               </div>
 
@@ -711,7 +744,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   type="text" 
                   placeholder="e.g. Amazon" 
                   value={tempFilters.expenseDescription}
-                  onChange={e => setTempFilters({ expenseDescription: sanitizeInput(e.target.value) })}
+                  onChange={e => setTempFilters({ expenseDescription: e.target.value })}
                   list="merchant-suggestions"
                 />
               </div>
@@ -746,7 +779,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <input 
                         type="text" 
                         value={editExpense?.expenseDescription || ''} 
-                        onChange={e => setEditExpense(prev => ({ ...prev!, expenseDescription: sanitizeInput(e.target.value) }))}
+                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, expenseDescription: e.target.value }) : null)}
                         list="merchant-suggestions"
                       />
                     </div>
@@ -756,7 +789,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <input 
                         type="number" 
                         value={editExpense?.expenseValue || 0} 
-                        onChange={e => setEditExpense(prev => ({ ...prev!, expenseValue: Number(e.target.value) }))}
+                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, expenseValue: Number(e.target.value) }) : null)}
                       />
                     </div>
 
@@ -765,7 +798,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <input 
                         type="date" 
                         value={editExpense?.date || ''} 
-                        onChange={e => setEditExpense(prev => ({ ...prev!, date: e.target.value }))}
+                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, date: e.target.value }) : null)}
                       />
                     </div>
 
@@ -774,14 +807,22 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <select 
                         className="dropdown-select" 
                         value={editExpense?.ccRecId || ''} 
-                        onChange={e => setEditExpense(prev => ({ ...prev!, ccRecId: Number(e.target.value) }))}
+                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, ccRecId: Number(e.target.value) }) : null)}
                       >
                         {allActiveCycles.map(cy => (
                           <option key={cy.ccRecId} value={cy.ccRecId}>
-                            {ccDetailsMap[cy.ccId] || 'Card'} | {cy.dateFrom} - {cy.dateTo}
+                            {ccDetailsMap[cy.ccId]?.ccName || 'Card'} | {cy.dateFrom} - {cy.dateTo}
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="input-group">
+                      <label>Remarks</label>
+                      <textarea 
+                        value={editExpense?.remarks || ''} 
+                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, remarks: e.target.value }) : null)}
+                        style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
+                      />
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
@@ -815,6 +856,23 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         <label>Billing Period</label>
                         <p>{cycleMap[selectedExpense.ccRecId] || 'Unknown Cycle'}</p>
                       </div>
+                      {selectedExpense.remarks && (
+                        <div className="detail-group" style={{ gridColumn: '1 / -1' }}>
+                          <label>Remarks</label>
+                          <p style={{ fontStyle: 'italic', color: '#4b5563' }}>{selectedExpense.remarks}</p>
+                        </div>
+                      )}
+                      
+                      {/* Credit Card Details Info */}
+                      {(allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)) && (
+                        <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+                          <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>Card Details</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span>{ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccName || 'Card Name'}</span>
+                            <span style={{ color: '#6366f1', fontWeight: 600 }}>**** {ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccLastDigit}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="detail-group">
                         <label>Date Added</label>
                         <p>{selectedExpense.dateAdded ? selectedExpense.dateAdded.split(' ')[0] : '—'}</p>
@@ -826,7 +884,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                      <button className="primary-btn" style={{ flex: 1 }} onClick={() => setIsEditing(true)}>Edit Record</button>
+                      <button className="primary-btn" style={{ flex: 1 }} onClick={() => { setEditExpense(selectedExpense); setIsEditing(true); }}>Edit Record</button>
                       <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsDetailModalOpen(false)}>Close</button>
                     </div>
                   </>

@@ -13,6 +13,7 @@ interface BillingCycleItem {
   dateAdded?: string;
   updateDate?: string;
   updatedBy?: string;
+  remarks?: string;
 }
 
 const BackIcon = () => (
@@ -67,8 +68,9 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
   const [editItem, setEditItem] = useState<Partial<BillingCycleItem>>({});
   const [confirmDialog, setConfirmDialog] = useState<{type: 'update' | 'delete', message: string} | null>(null);
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/[\\/;\%\$\*\!\`\~\-\-]/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   useEffect(() => {
@@ -158,6 +160,11 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
       return;
     }
 
+    if (containsProhibitedChars(newItem.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
+      return;
+    }
+
     setIsCreating(true);
     const token = await ensureFreshToken();
     if (!token) {
@@ -173,6 +180,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         dateTo: newItem.dateTo,
         dueDate: newItem.dueDate,
         status: newItem.status,
+        remarks: newItem.remarks,
         addedBy: username
       };
 
@@ -213,6 +221,11 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     const token = await ensureFreshToken();
     if (!token) return;
 
+    if (containsProhibitedChars(editItem.remarks || '')) {
+      setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
+      return;
+    }
+
     try {
       const username = localStorage.getItem('pfm_username') || 'jeff';
       const payload = {
@@ -221,6 +234,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         dateTo: editItem.dateTo,
         dueDate: editItem.dueDate,
         status: editItem.status,
+        remarks: editItem.remarks,
         updatedBy: username
       };
 
@@ -281,7 +295,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
       const token = await ensureFreshToken();
       if (!token) return;
 
-      const sStatus = statusFilter ? sanitizeInput(statusFilter) : '';
+      const sStatus = statusFilter ? statusFilter : '';
       let url = `${API_URLS.BILLING_CYCLE.BASE}?page=${pageNumber}&size=20&sortBy=ccRecId`;
       
       if (ccIdFilter && sStatus) {
@@ -468,6 +482,15 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
+              <div className="input-group">
+                <label>Remarks</label>
+                <textarea 
+                  placeholder="Additional notes..." 
+                  value={newItem.remarks} 
+                  onChange={e => setNewItem({...newItem, remarks: e.target.value})}
+                  style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
+                />
+              </div>
               
               <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate} disabled={isCreating}>
                 {isCreating ? 'Creating...' : 'Track Billing Cycle'}
@@ -543,6 +566,14 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
+                    <div className="input-group">
+                      <label>Remarks</label>
+                      <textarea 
+                        value={editItem.remarks || ''} 
+                        onChange={e => setEditItem({...editItem, remarks: e.target.value})}
+                        style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
+                      />
+                    </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
                       <button className="primary-btn" style={{ flex: 1 }} onClick={promptUpdate}>Save Update</button>
@@ -567,6 +598,12 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                     <div className="detail-group"><label>Due Date</label><p>{selectedItem.dueDate}</p></div>
                     <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded || '—'}</p></div>
                     <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
+                    {selectedItem.remarks && (
+                      <div className="detail-group" style={{ gridColumn: '1 / -1' }}>
+                        <label>Remarks</label>
+                        <p style={{ fontStyle: 'italic', color: '#4b5563' }}>{selectedItem.remarks}</p>
+                      </div>
+                    )}
                   </div>
 
                   {ccDetailsMap[selectedItem.ccId || 0] && (

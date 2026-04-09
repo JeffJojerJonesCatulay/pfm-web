@@ -94,8 +94,9 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
   const [isEditing, setIsEditing] = useState(false);
   const [editItem, setEditItem] = useState<Partial<TrackerItem>>({});
 
-  const sanitizeInput = (val: string) => {
-    return val.replace(/(--|\/|\\|;|%|\$|\*|!|`|~)/g, '');
+  const containsProhibitedChars = (val: string) => {
+    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
+    return prohibited.test(val);
   };
 
   const isFormValid = newItem.expenseDescription.trim() !== '' && 
@@ -280,26 +281,39 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
   const handleCreate = async () => {
     if (!isFormValid) return;
+    
+    if (containsProhibitedChars(newItem.expenseDescription) || containsProhibitedChars(newItem.remarks)) {
+      setResultDialog({ 
+        status: 'failed', 
+        message: 'Input contains prohibited characters (--, /, \\, ;, %, $, *, !, `, ~). Please remove them before saving.' 
+      });
+      return;
+    }
+
     const token = await ensureFreshToken();
     if (!token) return;
     setIsCreating(true);
     
+    const username = localStorage.getItem('pfm_username') || 'system';
+    const payload = {
+      salaryId: Number(newItem.salaryId),
+      expenseDescription: newItem.expenseDescription,
+      expenseType: newItem.expenseType,
+      expenseValue: Number(newItem.expenseValue),
+      remarks: newItem.remarks,
+      status: newItem.status,
+      date: newItem.date,
+      addedBy: username
+    };
+
     try {
-      const username = localStorage.getItem('pfm_username') || 'system';
       const res = await fetch(API_URLS.SALARY_EXPENSE.CREATE, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          salaryId: Number(newItem.salaryId),
-          date: newItem.date,
-          expenseDescription: sanitizeInput(newItem.expenseDescription), 
-          expenseValue: Number(newItem.expenseValue), 
-          expenseType: newItem.expenseType, 
-          addedBy: username
-        })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setIsCreateModalOpen(false);
@@ -307,12 +321,12 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         fetchData(0, false);
         setNewItem({
           expenseDescription: '',
-          expenseType: 'Variable',
+          expenseType: 'Fund Transfer',
           expenseValue: '0',
           remarks: '',
           status: 'Completed',
           date: new Date().toISOString().split('T')[0],
-          salaryId: ''
+          salaryId: selectedSalaryId ? selectedSalaryId.toString() : ''
         });
       } else {
         setResultDialog({ status: 'failed', message: 'Failed to create tracker record.' });
@@ -333,24 +347,33 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     const token = await ensureFreshToken();
     if (!selectedItem || !selectedItem.id || !token) return;
 
-    const updatedFields: any = {};
-    if (editItem.expenseDescription !== selectedItem.expenseDescription) updatedFields.expenseDescription = sanitizeInput(editItem.expenseDescription || '');
-    if (editItem.expenseType !== selectedItem.expenseType) updatedFields.expenseType = editItem.expenseType;
-    if (Number(editItem.expenseValue) !== selectedItem.expenseValue) updatedFields.expenseValue = Number(editItem.expenseValue);
-    if (editItem.date !== selectedItem.date) updatedFields.date = editItem.date;
-    if (Number(editItem.salaryId) !== selectedItem.salaryId) updatedFields.salaryId = Number(editItem.salaryId);
+    if (containsProhibitedChars(editItem.expenseDescription || '') || containsProhibitedChars(editItem.remarks || '')) {
+      setResultDialog({ 
+        status: 'failed', 
+        message: 'Input contains prohibited characters. Please remove them before updating.' 
+      });
+      return;
+    }
 
-    if (Object.keys(updatedFields).length === 0) return;
-    updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
+    const payload = {
+      ...selectedItem,
+      ...editItem,
+      id: selectedItem.id,
+      salaryId: Number(editItem.salaryId || selectedItem.salaryId),
+      expenseDescription: editItem.expenseDescription || selectedItem.expenseDescription || '',
+      expenseValue: Number(editItem.expenseValue || selectedItem.expenseValue || 0),
+      remarks: editItem.remarks || selectedItem.remarks || '',
+      updateBy: localStorage.getItem('pfm_username') || 'system'
+    };
 
     try {
-      const res = await fetch(API_URLS.SALARY_EXPENSE.UPDATE(selectedItem.id), {
+      const res = await fetch(API_URLS.SALARY_EXPENSE.UPDATE(selectedItem.id!), {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updatedFields)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Tracker record updated successfully.' });

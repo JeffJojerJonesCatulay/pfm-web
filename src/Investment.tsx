@@ -169,7 +169,10 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
   };
 
   const handleCreate = async () => {
-    if (newItem.allocId === 0) return;
+    if (newItem.allocId === 0 || !newItem.date) {
+      setResultDialog({ status: 'failed', message: 'Please select an Account and provide a Period Date.' });
+      return;
+    }
     setIsCreating(true);
     const token = await ensureFreshToken();
     if (!token) { setIsCreating(false); return; }
