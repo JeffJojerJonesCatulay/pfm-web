@@ -88,6 +88,7 @@ interface DashboardProps {
   onNavigateToCCDetails: () => void;
   onNavigateToCCExpense?: () => void;
   onNavigateToInvestment?: () => void;
+  onNavigateToNetWorth?: () => void;
 }
 
 export default function Dashboard({ 
@@ -97,7 +98,8 @@ export default function Dashboard({
   onNavigateToTracker, 
   onNavigateToCCDetails, 
   onNavigateToCCExpense,
-  onNavigateToInvestment
+  onNavigateToInvestment,
+  onNavigateToNetWorth
 }: DashboardProps) {
   const [username, setUsername] = useState('User');
   const [showAbout, setShowAbout] = useState(false);
@@ -181,6 +183,7 @@ export default function Dashboard({
                   t.name === 'Tracker' ? onNavigateToTracker : 
                   t.name === 'CC Details' ? onNavigateToCCDetails :
                   t.name === 'CC Expense' ? onNavigateToCCExpense :
+                  t.name === 'Net Worth' ? onNavigateToNetWorth :
                   t.name === 'About' ? () => setShowAbout(true) : undefined
                 }
               >

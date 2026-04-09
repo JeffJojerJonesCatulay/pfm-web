@@ -12,11 +12,12 @@ import BillingCycle from './BillingCycle';
 import Investment from './Investment';
 import InvestmentMonthlyGrowth from './InvestmentMonthlyGrowth';
 import InvestmentYearlyGrowth from './InvestmentYearlyGrowth';
+import NetWorth from './NetWorth';
 import './css/App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle' | 'investment' | 'investmentMonthlyGrowth' | 'investmentYearlyGrowth'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'allocations' | 'wantlist' | 'tracker' | 'salaryRecord' | 'ccdetails' | 'connectedApps' | 'ccexpense' | 'billingCycle' | 'investment' | 'investmentMonthlyGrowth' | 'investmentYearlyGrowth' | 'netWorth'>('dashboard');
 
   return (
     <>
@@ -43,6 +44,8 @@ function App() {
           <InvestmentMonthlyGrowth onBack={() => setCurrentView('investment')} />
         ) : currentView === 'investmentYearlyGrowth' ? (
           <InvestmentYearlyGrowth onBack={() => setCurrentView('investment')} />
+        ) : currentView === 'netWorth' ? (
+          <NetWorth onBack={() => setCurrentView('dashboard')} />
         ) : (
           <Dashboard 
             onLogout={() => setIsLoggedIn(false)} 
@@ -52,6 +55,7 @@ function App() {
             onNavigateToCCDetails={() => setCurrentView('ccdetails')}
             onNavigateToCCExpense={() => setCurrentView('ccexpense')}
             onNavigateToInvestment={() => setCurrentView('investment')}
+            onNavigateToNetWorth={() => setCurrentView('netWorth')}
           />
         )
       ) : (

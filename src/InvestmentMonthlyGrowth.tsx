@@ -36,8 +36,17 @@ const PenIcon = () => (
     </svg>
 );
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
+
 export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGrowthProps) {
   const [items, setItems] = useState<GrowthRecord[]>([]);
+  const [monthFilter, setMonthFilter] = useState<string>('All');
+  const [yearFilter, setYearFilter] = useState<string>('All');
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
   const [allocationMap, setAllocationMap] = useState<Record<number, string>>({});
@@ -161,6 +170,12 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
 
+  const filteredItems = items.filter(item => {
+    const monthMatch = monthFilter === 'All' || item.month === monthFilter;
+    const yearMatch = yearFilter === 'All' || item.year.toString() === yearFilter;
+    return monthMatch && yearMatch;
+  });
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header">
@@ -190,11 +205,48 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
       </section>
 
       <main className="allocations-main">
+        <div className="filter-bar" style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          maxWidth: '600px', 
+          margin: '20px auto 28px', 
+          padding: '0 16px' 
+        }}>
+          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563', marginBottom: '8px', display: 'block' }}>FILTER MONTH</label>
+            <select 
+              className="dropdown-select" 
+              value={monthFilter} 
+              onChange={e => setMonthFilter(e.target.value)}
+              style={{ background: 'white', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', boxSizing: 'border-box' }}
+            >
+              <option value="All">All Months</option>
+              {MONTHS.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563', marginBottom: '8px', display: 'block' }}>FILTER YEAR</label>
+            <select 
+              className="dropdown-select" 
+              value={yearFilter} 
+              onChange={e => setYearFilter(e.target.value)}
+              style={{ background: 'white', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', boxSizing: 'border-box' }}
+            >
+              <option value="All">All Years</option>
+              {YEARS.map(y => (
+                <option key={y} value={y.toString()}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {loading && items.length === 0 ? (
           <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Analyzing portfolio performance...</p>
-        ) : items.length > 0 ? (
+        ) : filteredItems.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
-            {items.map((item, i) => (
+            {filteredItems.map((item, i) => (
               <div key={item.id || i} className="allocation-card clickable-card" style={{ padding: '20px' }} onClick={() => handleCardClick(item.id)}>
                 <div className="alloc-avatar" style={{ 
                   backgroundColor: item.growthRate >= 0 ? '#10b981' : '#ef4444',
