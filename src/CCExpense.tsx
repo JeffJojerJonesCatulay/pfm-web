@@ -128,10 +128,15 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     return token;
   };
 
+  const [cycleSummary, setCycleSummary] = useState({ total: 0, payment: 0, remaining: 0 });
+
   const fetchData = async (pageNumber = 0, ccRecId = selectedCycleId, filters = searchFilters) => {
     if (!ccRecId) return;
     setLoading(true);
-    if (pageNumber === 0) setItems([]); // Clear table immediately on cycle change or first page load
+    if (pageNumber === 0) {
+      setItems([]); 
+      fetchSummaryData(ccRecId);
+    }
     const token = await ensureFreshToken();
     if (!token) {
       setLoading(false);
@@ -164,6 +169,45 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     }
   };
 
+  const fetchSummaryData = async (ccRecId: number) => {
+    setCycleSummary({ total: 0, payment: 0, remaining: 0 });
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      // Fetch a larger set to ensure full cycle summary or use a dedicated summary endpoint if available
+      // Here we use 500 as a reasonable ceiling for a single billing cycle's transactions
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/cc.record.expense/ccRecId/${ccRecId}?page=0&size=500&sortBy=ccExpId`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = (json.data?.content || json.content || []) as CCExpenseItem[];
+        
+        let total = 0;
+        let payment = 0;
+        
+        content.forEach(item => {
+          const val = Number(item.expenseValue || 0);
+          const desc = (item.expenseDescription || '').trim();
+          
+          if (desc === 'Payment') {
+            payment += val;
+          } else {
+            total += val;
+          }
+        });
+
+        setCycleSummary({
+          total,
+          payment,
+          remaining: total - payment
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching summary:', e);
+    }
+  };
+
   const promptUpdate = () => {
     setConfirmDialog({ type: 'update', message: 'Are you sure you want to update this record?' });
   };
@@ -185,6 +229,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Record deleted.' });
         setIsDetailModalOpen(false);
+        fetchSummaryData(selectedCycleId!);
         fetchData(page);
       } else { setResultDialog({ status: 'failed', message: 'Failed to delete.' }); }
     } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
@@ -213,6 +258,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Record updated!' });
         setIsEditing(false);
+        fetchSummaryData(selectedCycleId!);
         fetchExpenseDetail(editExpense.ccExpId);
         fetchData(page);
       } else { setResultDialog({ status: 'failed', message: 'Update failed.' }); }
@@ -357,14 +403,24 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {selectedCycleId && (
-              <button 
-                className="premium-pill-btn" 
-                onClick={onNavigateToBillingCycle}
-                style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
-              >
-                <WalletIcon />
-                <span>Billing Cycles</span>
-              </button>
+              <>
+                <button 
+                  className="premium-pill-btn" 
+                  onClick={() => setIsInitialModalOpen(true)}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+                >
+                  <WalletIcon />
+                  <span>Switch Period</span>
+                </button>
+                <button 
+                  className="premium-pill-btn" 
+                  onClick={onNavigateToBillingCycle}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+                >
+                  <WalletIcon />
+                  <span>Billing Cycles</span>
+                </button>
+              </>
             )}
             <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
               <SearchIcon />
@@ -385,9 +441,36 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           </div>
         ) : (
           <>
+            {/* Billing Cycle Summary Card */}
+            <div style={{ maxWidth: '600px', margin: '0 auto 24px', padding: '0 16px' }}>
+              <div style={{ 
+                background: 'white', 
+                borderRadius: '24px', 
+                padding: '24px', 
+                boxShadow: '0 10px 30px rgba(0,0,0,0.06)', 
+                border: '1px solid #f3f4f6',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '20px'
+              }}>
+                <div style={{ textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
+                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Total Expense</p>
+                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#6366f1', margin: 0 }}>₱{cycleSummary.total.toLocaleString()}</p>
+                </div>
+                <div style={{ textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
+                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Payment</p>
+                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#10b981', margin: 0 }}>₱{cycleSummary.payment.toLocaleString()}</p>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Remaining</p>
+                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#f59e0b', margin: 0 }}>₱{cycleSummary.remaining.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Filter Indicators */}
             {Object.values(searchFilters).some(v => v !== '') && (
-              <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap', padding: '0 20px' }}>
+              <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap', padding: '0 16px' }}>
                 {Object.entries(searchFilters).map(([k, v]) => v && (
                   <div key={k} style={{ background: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #e5e7eb' }}>
                     <span style={{ fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase' }}>{k === 'expenseDescription' ? 'Merchant' : k}:</span>
@@ -421,7 +504,10 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       {cycleMap[it.ccRecId] || `Cycle #${it.ccRecId}`}
                     </p>
                   </div>
-                  <div className="alloc-date" style={{ fontWeight: 'bold' }}>
+                  <div className="alloc-date" style={{ 
+                    fontWeight: 'bold', 
+                    color: it.expenseDescription === 'Payment' ? '#10b981' : 'inherit' 
+                  }}>
                     ₱ {it.expenseValue?.toLocaleString()}
                   </div>
                 </div>
