@@ -7,6 +7,8 @@ interface LoginProps {
   onLogin: () => void;
 }
 
+import { isValidInput } from './utils/securityUtils';
+
 export default function Login({ onLogin }: LoginProps) {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -14,11 +16,6 @@ export default function Login({ onLogin }: LoginProps) {
   const [loginPassword, setLoginPassword] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-
-  const isValidInput = (val: string) => {
-    const invalidChars = ['--', '/', '\\', ';', '%', '$', '*', '!', '`', '~'];
-    return !invalidChars.some(char => val.includes(char));
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +41,8 @@ export default function Login({ onLogin }: LoginProps) {
           token = text;
         }
         
+        // SECURITY NOTE: Storing password in localStorage is unsafe. 
+        // Migrate to Refresh Tokens or simple JWT expiry for production.
         localStorage.setItem('pfm_username', loginUsername);
         localStorage.setItem('pfm_password', loginPassword);
         localStorage.setItem('pfm_token', token);

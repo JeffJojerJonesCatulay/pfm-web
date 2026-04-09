@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_URLS } from './url';
+import { ensureFreshToken, containsProhibitedChars } from './utils/securityUtils';
 import './css/App.css';
 
 interface ConnectedAppItem {
@@ -80,33 +81,6 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
 
   const username = localStorage.getItem('pfm_username') || 'jeff';
-  const password = localStorage.getItem('pfm_password') || '';
-
-  const ensureFreshToken = async () => {
-    if (!username || !password) return null;
-    let token = localStorage.getItem('pfm_token') || '';
-    const tokenTime = Number(localStorage.getItem('pfm_token_time') || 0);
-    const isExpired = Date.now() - tokenTime > 1000 * 60 * 10; 
-    if (!token || isExpired) {
-      try {
-        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        if (authRes.ok) {
-          const authText = await authRes.text();
-          try {
-            const parsed = JSON.parse(authText);
-            token = parsed.data?.token || parsed.token || authText;
-          } catch (e) { token = authText; }
-          localStorage.setItem('pfm_token', token);
-          localStorage.setItem('pfm_token_time', Date.now().toString());
-        } else { return null; }
-      } catch (e) { return null; }
-    }
-    return token;
-  };
 
   const fetchCCOptions = async () => {
     try {
@@ -119,19 +93,14 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
         const json = await res.json();
         setCcOptions(json.data?.content || []);
       }
-    } catch (e) { console.error('Error fetching CC options:', e); }
+    } catch (e) {
+      console.error('Error fetching CC options:', e);
+    }
   };
 
   useEffect(() => {
     fetchCCOptions();
   }, []);
-
-  const containsProhibitedChars = (val: string) => {
-    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
-    return prohibited.test(val);
-  };
-
-  const fetchData = async (pageNumber: number, append: boolean) => {
     setLoading(true);
     if (!append) setItems([]);
 

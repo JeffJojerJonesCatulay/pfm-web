@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_URLS } from './url';
+import { ensureFreshToken, containsProhibitedChars } from './utils/securityUtils';
 import './css/App.css';
 
 interface BillingCycleItem {
@@ -68,11 +69,6 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
   const [editItem, setEditItem] = useState<Partial<BillingCycleItem>>({});
   const [confirmDialog, setConfirmDialog] = useState<{type: 'update' | 'delete', message: string} | null>(null);
 
-  const containsProhibitedChars = (val: string) => {
-    const prohibited = /[\\/;\%\$\*\!\`\~]|--/;
-    return prohibited.test(val);
-  };
-
   useEffect(() => {
     const init = async () => {
       await fetchCcDetailsAsMap();
@@ -102,36 +98,6 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     } catch (e) {
       console.error('Error fetching CC details for map:', e);
     }
-  };
-
-  const ensureFreshToken = async (): Promise<string | null> => {
-    const username = localStorage.getItem('pfm_username');
-    const password = localStorage.getItem('pfm_password');
-    if (!username || !password) return null;
-
-    let token = localStorage.getItem('pfm_token') || '';
-    const tokenTime = Number(localStorage.getItem('pfm_token_time') || 0);
-    const isExpired = Date.now() - tokenTime > 1000 * 60 * 10; 
-
-    if (!token || isExpired) {
-      try {
-        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        if (authRes.ok) {
-          const authText = await authRes.text();
-          try {
-            const parsed = JSON.parse(authText);
-            token = parsed.data?.token || parsed.token || authText;
-          } catch (e) { token = authText; }
-          localStorage.setItem('pfm_token', token);
-          localStorage.setItem('pfm_token_time', Date.now().toString());
-        } else { return null; }
-      } catch (e) { return null; }
-    }
-    return token;
   };
 
   const fetchCcOptions = async () => {
