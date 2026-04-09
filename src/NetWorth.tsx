@@ -93,7 +93,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
     return monthMatch && yearMatch;
   });
 
-  const grandTotal = filteredContributions.reduce((acc, curr) => acc + (curr.contribution || 0), 0);
+  const grandTotal = filteredContributions.reduce((acc, curr) => acc + (curr.currentValue || 0), 0);
 
   useEffect(() => {
     if (!loading && filteredContributions.length > 0 && grandTotal > 0) {
@@ -161,7 +161,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
   const pieData = useMemo(() => {
     return filteredContributions.map(c => ({
       name: getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`,
-      value: c.contribution || 0
+      value: c.currentValue || 0
     })).filter(it => it.value > 0).sort((a, b) => b.value - a.value);
   }, [filteredContributions, allocationOptions]);
 
@@ -331,7 +331,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                                  const d = (alloc?.description || '').toLowerCase();
                                  return d.includes('not accessible');
                               }),
-                              'General': itemsInType.filter(c => {
+                              'Uncategorized': itemsInType.filter(c => {
                                  const alloc = getAllocDetail(c.allocId || c.id || c.allocation);
                                  const d = (alloc?.description || '').toLowerCase();
                                  return !d.includes('accessible');
@@ -360,7 +360,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                                         fontSize: '12px'
                                       }}>
                                         <span style={{ fontWeight: '700', color: '#374151' }}>{getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`}:</span>
-                                        <span style={{ fontWeight: '900', color: '#6366f1', marginLeft: '6px' }}>₱{(c.contribution || 0).toLocaleString()}</span>
+                                        <span style={{ fontWeight: '900', color: '#6366f1', marginLeft: '6px' }}>₱{(c.currentValue || 0).toLocaleString()}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -390,7 +390,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                             else subMatch = !d.includes('accessible');
 
                             return typeMatch && subMatch;
-                          }).reduce((acc, curr) => acc + (curr.contribution || 0), 0);
+                          }).reduce((acc, curr) => acc + (curr.currentValue || 0), 0);
 
                           if (total === 0) return null;
 

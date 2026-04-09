@@ -89,11 +89,11 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      await fetchAllocationOptions();
-      await fetchData(0, null);
-    };
-    init();
+    fetchData(0, selectedAllocId);
+  }, [selectedAllocId]);
+
+  useEffect(() => {
+    fetchAllocationOptions();
   }, []);
 
   const fetchAllocationOptions = async () => {
@@ -316,7 +316,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
       <main className="allocations-main">
         <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
         
-        {selectedAllocId === null && items.length > 0 && (
+        {items.length > 0 && (
           <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', minHeight: '400px', overflow: 'hidden', padding: '0' }}>
             <div className="chart-header" style={{ padding: '24px 24px 0' }}>
               <span className="chart-title">Portfolio Valuation Breakdown</span>
@@ -434,7 +434,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
               <button className="pagination-btn" onClick={() => fetchData(page + 1)} disabled={isLastPage || loading}>Next</button>
             </div>
           </div>
-        ) : (
+        ) : items.length === 0 ? (
           <div className="empty-state-container">
             <div className="empty-state-icon-box">
               <img src={deskIllustrationUrl} alt="Empty" className="empty-state-illustration" />
@@ -442,7 +442,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
             <h3 className="empty-state-title">No Entries Recorded</h3>
             <p className="empty-state-text">Start tracking your portfolio by adding your first entry for any account.</p>
           </div>
-        )}
+        ) : null}
         </div>
       </main>
 
