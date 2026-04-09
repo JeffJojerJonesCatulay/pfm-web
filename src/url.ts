@@ -75,6 +75,8 @@ export const API_URLS = {
     BASE: `${BASE}get/investmentsandsavingsday`,
     SEARCH_BY_ALLOC: (allocId: number|string) => `${BASE}search/investmentsandsavingsday/allocId/${allocId}`,
     CREATE: `${BASE}investmentsandsavingsday/create/`,
+    UPDATE: (id: number|string) => `${BASE}investmentsandsavingsday/update/${id}`,
+    DELETE: (id: number|string) => `${BASE}investmentsandsavingsday/delete/${id}`,
   },
   MONTHLY_GROWTH: {
     BASE: `${BASE}get/monthlygrowth`,

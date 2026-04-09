@@ -238,13 +238,13 @@ export default function NetWorth({ onBack }: NetWorthProps) {
           </div>
         ) : (
           <>
-            {filteredContributions.length > 0 && (
+            {pieData.length > 0 && (
               <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f3f4f6' }}>
                 <div className="chart-header" style={{ marginBottom: '20px', padding: 0 }}>
                   <span className="chart-title" style={{ fontSize: '15px' }}>Portfolio Distribution</span>
                   <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>{pieData.length} ACCOUNTS</span>
                 </div>
-                <div style={{ height: '300px', width: '100%' }}>
+                <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -255,8 +255,8 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                         outerRadius={100}
                         paddingAngle={5}
                         dataKey="value"
-                        animationBegin={0}
-                        animationDuration={1500}
+                        nameKey="name"
+                        isAnimationActive={true}
                       >
                         {pieData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />

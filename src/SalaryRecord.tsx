@@ -6,8 +6,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  Area
+  ResponsiveContainer
 } from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';

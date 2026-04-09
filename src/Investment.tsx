@@ -51,6 +51,13 @@ const PenIcon = () => (
   </svg>
 );
 
+const TrashIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
+
 export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNavigateToYearlyGrowth }: InvestmentProps) {
   const [items, setItems] = useState<InvestmentItem[]>([]);
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
@@ -76,6 +83,9 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     marketValue: 0 
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editItem, setEditItem] = useState<InvestmentItem | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{type: 'delete' | 'update', message: string} | null>(null);
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
 
   useEffect(() => {
@@ -106,6 +116,11 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
 
   const fetchData = async (pageNumber = 0, allocId = selectedAllocId) => {
     setLoading(true);
+    if (pageNumber === 0) {
+      setItems([]);
+      setTotalElements(0);
+      setTotalPages(1);
+    }
     const token = await ensureFreshToken();
     if (!token) { setLoading(false); return; }
 
@@ -135,6 +150,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
   };
 
   const fetchAllocDetail = async (allocId: number) => {
+    setSelectedAllocDetail(null);
     setIsFetchingAlloc(true);
     const token = await ensureFreshToken();
     if (!token) { setIsFetchingAlloc(false); return; }
@@ -173,6 +189,64 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
         setResultDialog({ status: 'failed', message: 'Failed to record entry. Please try again.' });
       }
     } catch (e) { setResultDialog({ status: 'failed', message: 'An error occurred.' }); } finally { setIsCreating(false); }
+  };
+
+  const executeDelete = async () => {
+    setConfirmDialog(null);
+    if (!selectedItem?.id) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(API_URLS.INVESTMENT.DELETE(selectedItem.id), {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Portfolio entry deleted.' });
+        setIsModalOpen(false);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Failed to delete.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
+  };
+
+  const executeUpdate = async () => {
+    setConfirmDialog(null);
+    if (!editItem?.id) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+
+    try {
+      const body = { 
+        ...editItem, 
+        updateBy: localStorage.getItem('pfm_username') || 'jeff',
+        updateDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const res = await fetch(API_URLS.INVESTMENT.UPDATE(editItem.id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Portfolio updated!' });
+        setIsEditing(false);
+        setSelectedItem(editItem);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Update failed.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Error processing update.' }); }
+  };
+
+  const promptDelete = () => {
+    setConfirmDialog({ type: 'delete', message: 'This entry will be permanently removed. Continue?' });
+  };
+
+  const closeDetailModal = () => {
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setSelectedItem(null);
+    setEditItem(null);
+    setSelectedAllocDetail(null);
   };
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
@@ -496,56 +570,142 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content alloc-detail-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <div className="alloc-detail-content">
-              <div className="alloc-detail-header">
-                <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
-                  {getInitial(allocationMap[selectedItem.allocId])}
-                </div>
-                <h2>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</h2>
-                <p style={{ color: '#6b7280', fontSize: '14px' }}>Recorded on {selectedItem.date}</p>
-              </div>
-
-              <div className="detail-grid">
-                <div className="detail-group">
-                  <label>Market Valuation</label>
-                  <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
-                    ₱ {selectedItem.marketValue?.toLocaleString()}
-                  </p>
-                </div>
-                <div className="detail-group">
-                  <label>Value Added</label>
-                  <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
-                </div>
-              </div>
-
-              {selectedAllocDetail && (
-                <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>Allocation Details</h4>
-                  <div className="detail-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div className="detail-group">
-                        <label style={{ fontSize: '10px' }}>Name</label>
-                        <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.allocation}</p>
-                      </div>
-                      <div className="detail-group">
-                        <label style={{ fontSize: '10px' }}>Type</label>
-                        <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.type}</p>
-                      </div>
-                    </div>
-                    <div className="detail-group">
-                      <label style={{ fontSize: '10px' }}>Description</label>
-                      <p style={{ fontSize: '13px', margin: 0, fontWeight: '500', color: '#4b5563' }}>{selectedAllocDetail.description || 'No description provided.'}</p>
-                    </div>
-                    <div className="detail-group">
-                      <label style={{ fontSize: '10px' }}>Status</label>
-                      <p style={{ fontSize: '13px', margin: 0, fontWeight: '600', color: selectedAllocDetail.status === 'Active' ? '#10b981' : '#ef4444' }}>{selectedAllocDetail.status}</p>
+              {isEditing ? (
+                <div className="login-form">
+                  <h2 className="form-title">Edit Entry</h2>
+                  
+                  <div className="input-group">
+                    <label>Account / Asset</label>
+                    <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '13px', fontWeight: 600 }}>
+                      {allocationMap[editItem?.allocId || 0] || 'Fund'}
                     </div>
                   </div>
+
+                  <div className="input-group">
+                    <label>Period Date</label>
+                    <input 
+                      type="date" 
+                      value={editItem?.date || ''} 
+                      onChange={e => setEditItem(prev => prev ? ({ ...prev, date: e.target.value }) : null)} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%', marginBottom: '8px' }}>
+                    <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                      <label>Value Added (₱)</label>
+                      <input 
+                        type="number" 
+                        value={editItem?.valueAdded || 0} 
+                        onChange={e => setEditItem(prev => prev ? ({ ...prev, valueAdded: Number(e.target.value) }) : null)} 
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                      <label>Market Value (₱)</label>
+                      <input 
+                        type="number" 
+                        value={editItem?.marketValue || 0} 
+                        onChange={e => setEditItem(prev => prev ? ({ ...prev, marketValue: Number(e.target.value) }) : null)} 
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                    <button className="primary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog({ type: 'update', message: 'Save changes to this entry?' })}>Update</button>
+                    <button className="secondary-btn" style={{ flex: 1, color: '#6b7280', border: '1px solid #e5e7eb' }} onClick={() => setIsEditing(false)}>Cancel</button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div className="alloc-detail-header" style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: '-10px', right: '-10px', display: 'flex', gap: '8px' }}>
+                      <button className="icon-btn sm" onClick={() => { setEditItem(selectedItem); setIsEditing(true); }} style={{ padding: '8px', background: '#f3f4f6', color: '#6366f1' }}>
+                        <PenIcon />
+                      </button>
+                      <button className="icon-btn sm" onClick={promptDelete} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444' }}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+
+                    <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
+                      {getInitial(allocationMap[selectedItem.allocId])}
+                    </div>
+                    <h2>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</h2>
+                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Recorded on {selectedItem.date}</p>
+                  </div>
+
+                  <div className="detail-grid">
+                    <div className="detail-group">
+                      <label>Market Valuation</label>
+                      <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
+                        ₱ {selectedItem.marketValue?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="detail-group">
+                      <label>Value Added</label>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {selectedAllocDetail && (
+                    <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 12px', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>Allocation Details</h4>
+                      <div className="detail-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className="detail-group">
+                            <label style={{ fontSize: '10px' }}>Name</label>
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.allocation}</p>
+                          </div>
+                          <div className="detail-group">
+                            <label style={{ fontSize: '10px' }}>Type</label>
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.type}</p>
+                          </div>
+                        </div>
+                        <div className="detail-group">
+                          <label style={{ fontSize: '10px' }}>Description</label>
+                          <p style={{ fontSize: '13px', margin: 0, fontWeight: '500', color: '#4b5563' }}>{selectedAllocDetail.description || 'No description provided.'}</p>
+                        </div>
+                        <div className="detail-group">
+                          <label style={{ fontSize: '10px' }}>Status</label>
+                          <p style={{ fontSize: '13px', margin: 0, fontWeight: '600', color: selectedAllocDetail.status === 'Active' ? '#10b981' : '#ef4444' }}>{selectedAllocDetail.status}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isFetchingAlloc && <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>Loading account info...</p>}
+
+                  <button className="secondary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => { setIsModalOpen(false); setSelectedAllocDetail(null); }}>Close</button>
+                </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
 
-              {isFetchingAlloc && <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>Loading account info...</p>}
-
-              <button className="secondary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => { setIsModalOpen(false); setSelectedAllocDetail(null); }}>Close</button>
+      {/* CONFIRMATION DIALOG */}
+      {confirmDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '380px', textAlign: 'center' }}>
+            <div className="warning-icon" style={{ 
+              backgroundColor: confirmDialog.type === 'delete' ? '#fee2e2' : '#e0e7ff', 
+              color: confirmDialog.type === 'delete' ? '#ef4444' : '#6366f1',
+              width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+            }}>
+              {confirmDialog.type === 'delete' ? <TrashIcon /> : <PenIcon />}
+            </div>
+            <h2 className="form-title">Confirm Action</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ flex: 1, background: confirmDialog.type === 'delete' ? '#ef4444' : '#6366f1' }}
+                onClick={confirmDialog.type === 'delete' ? executeDelete : executeUpdate}
+              >
+                Confirm
+              </button>
+              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog(null)}>Cancel</button>
             </div>
           </div>
         </div>

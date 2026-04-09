@@ -73,6 +73,14 @@ const WalletIcon = () => (
   </svg>
 );
 
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
+
 export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpenseProps) {
   const [items, setItems] = useState<CCExpenseItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -646,8 +654,32 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
 
       {/* Initial Cycle Selection Modal */}
       {isInitialModalOpen && (
-        <div className="modal-overlay" onClick={() => selectedCycleId && setIsInitialModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+        <div className="modal-overlay" onClick={() => setIsInitialModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px', position: 'relative' }}>
+            <button 
+              className="modal-close-icon" 
+              onClick={() => setIsInitialModalOpen(false)}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#9ca3af',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 0.2s',
+                zIndex: 1
+              }}
+              onMouseOver={e => e.currentTarget.style.color = '#4b5563'}
+              onMouseOut={e => e.currentTarget.style.color = '#9ca3af'}
+            >
+              <CloseIcon />
+            </button>
             <h2 className="form-title" style={{ textAlign: 'center' }}>{selectedCycleId ? 'Switch Billing Period' : 'Select Billing Period'}</h2>
             <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
               {selectedCycleId ? 'Select a different period to view its records.' : 'Choose a cycle to view and record expenses.'}
@@ -678,19 +710,28 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
               {selectedCycleId ? (
                 <button 
                   className="secondary-btn margin-top-md" 
-                  style={{ width: '100%' }} 
+                  style={{ width: '100%', borderRadius: '12px' }} 
                   onClick={() => setIsInitialModalOpen(false)}
                 >
                   Close
                 </button>
               ) : (
-                <button 
-                  className="secondary-btn margin-top-md" 
-                  style={{ width: '100%', borderColor: '#6b7280', color: '#6b7280' }} 
-                  onClick={onBack}
-                >
-                  Back to Dashboard
-                </button>
+                <>
+                  <button 
+                    className="primary-btn margin-top-md" 
+                    style={{ width: '100%', borderRadius: '12px', fontWeight: 700 }} 
+                    onClick={onNavigateToBillingCycle}
+                  >
+                    Manage Billing Cycles
+                  </button>
+                  <button 
+                    className="secondary-btn margin-top-sm" 
+                    style={{ width: '100%', borderColor: '#e5e7eb', color: '#6b7280', borderRadius: '12px' }} 
+                    onClick={onBack}
+                  >
+                    Back to Dashboard
+                  </button>
+                </>
               )}
             </div>
           </div>
