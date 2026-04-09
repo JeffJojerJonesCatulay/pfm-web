@@ -11,6 +11,7 @@ interface AllocationItem {
   addedBy?: string;
   updateDate?: string;
   updateBy?: string;
+  description?: string;
 }
 
 interface AllocationsProps {
@@ -51,7 +52,12 @@ export default function Allocations({ onBack }: AllocationsProps) {
   const [selectedAllocation, setSelectedAllocation] = useState<AllocationItem | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newAllocation, setNewAllocation] = useState({ allocation: '', type: 'Savings', status: 'Active' });
+  const [newAllocation, setNewAllocation] = useState({ 
+    allocation: '', 
+    type: 'Savings', 
+    status: 'Active',
+    description: '' 
+  });
   const [isCreating, setIsCreating] = useState(false);
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -141,12 +147,12 @@ export default function Allocations({ onBack }: AllocationsProps) {
     setIsModalOpen(true);
     setIsFetchingDetails(true);
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/id/${id}`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping/allocId/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const json = await res.json();
-        const detail = json.data || json;
+        const detail = Array.isArray(json.data) ? json.data[0] : (json.data || json);
         setSelectedAllocation(detail);
         setEditItem(detail);
       }
@@ -162,13 +168,19 @@ export default function Allocations({ onBack }: AllocationsProps) {
       const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ allocation: sanitizeInput(newAllocation.allocation), type: newAllocation.type, status: newAllocation.status, addedBy: username })
+        body: JSON.stringify({ 
+          allocation: sanitizeInput(newAllocation.allocation), 
+          type: newAllocation.type, 
+          status: newAllocation.status, 
+          description: sanitizeInput(newAllocation.description),
+          addedBy: username 
+        })
       });
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Allocation created.' });
         fetchData(0, false);
         setIsCreateModalOpen(false);
-        setNewAllocation({ allocation: '', type: 'Savings', status: 'Active' });
+        setNewAllocation({ allocation: '', type: 'Savings', status: 'Active', description: '' });
       } else { setResultDialog({ status: 'failed', message: 'Create failed.' }); }
     } catch (e) { setResultDialog({ status: 'failed', message: 'Error occurred.' }); } finally { setIsCreating(false); }
   };
@@ -182,6 +194,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
     if (editItem.allocation !== selectedAllocation.allocation) updatedFields.allocation = sanitizeInput(editItem.allocation || '');
     if (editItem.type !== selectedAllocation.type) updatedFields.type = editItem.type;
     if (editItem.status !== selectedAllocation.status) updatedFields.status = editItem.status;
+    if (editItem.description !== selectedAllocation.description) updatedFields.description = sanitizeInput(editItem.description || '');
     
     if (Object.keys(updatedFields).length === 0) return;
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
@@ -237,6 +250,13 @@ export default function Allocations({ onBack }: AllocationsProps) {
           }}><SearchIcon /></button>
         </div>
       </section>
+
+      {/* Suggestions Datalist */}
+      <datalist id="allocation-suggestions">
+        {Array.from(new Set(allocations.map(a => a.allocation))).filter(Boolean).map((name, i) => (
+          <option key={i} value={name} />
+        ))}
+      </datalist>
 
       <main className="allocations-main">
         {Object.keys(searchFilters).length > 0 && (
@@ -297,9 +317,10 @@ export default function Allocations({ onBack }: AllocationsProps) {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2 className="form-title">Add Allocation</h2>
             <form className="login-form">
-              <div className="input-group"><label>Allocation Name</label><input type="text" value={newAllocation.allocation} onChange={e => setNewAllocation({...newAllocation, allocation: e.target.value})} /></div>
+              <div className="input-group"><label>Allocation Name</label><input type="text" value={newAllocation.allocation} onChange={e => setNewAllocation({...newAllocation, allocation: e.target.value})} list="allocation-suggestions" /></div>
               <div className="input-group"><label>Type</label><select className="dropdown-select" value={newAllocation.type} onChange={e => setNewAllocation({...newAllocation, type: e.target.value})}><option value="Savings">Savings</option><option value="Investment">Investment</option><option value="Expense">Expense</option></select></div>
               <div className="input-group"><label>Status</label><select className="dropdown-select" value={newAllocation.status} onChange={e => setNewAllocation({...newAllocation, status: e.target.value})}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+              <div className="input-group"><label>Description</label><input type="text" value={newAllocation.description} onChange={e => setNewAllocation({...newAllocation, description: e.target.value})} /></div>
               <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate} disabled={isCreating}>{isCreating ? 'Processing...' : 'Save Allocation'}</button>
             </form>
           </div>
@@ -314,9 +335,10 @@ export default function Allocations({ onBack }: AllocationsProps) {
               <div className="alloc-detail-content">
                 {isEditing ? (
                   <div className="login-form">
-                    <div className="input-group"><label>Allocation Name</label><input type="text" value={editItem.allocation || ''} onChange={e => setEditItem({...editItem, allocation: e.target.value})} /></div>
+                    <div className="input-group"><label>Allocation Name</label><input type="text" value={editItem.allocation || ''} onChange={e => setEditItem({...editItem, allocation: e.target.value})} list="allocation-suggestions" /></div>
                     <div className="input-group"><label>Type</label><select className="dropdown-select" value={editItem.type || ''} onChange={e => setEditItem({...editItem, type: e.target.value})}><option value="Savings">Savings</option><option value="Investment">Investment</option><option value="Expense">Expense</option></select></div>
                     <div className="input-group"><label>Status</label><select className="dropdown-select" value={editItem.status || ''} onChange={e => setEditItem({...editItem, status: e.target.value})}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
+                    <div className="input-group"><label>Description</label><input type="text" value={editItem.description || ''} onChange={e => setEditItem({...editItem, description: e.target.value})} /></div>
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                       <button className="primary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog({type: 'update', message: 'Update?'})}>Update</button>
                       <button className="secondary-btn" style={{ flex: 1, borderColor: '#e53e3e', color: '#e53e3e' }} onClick={() => setConfirmDialog({type: 'delete', message: 'Delete?'})}>Delete</button>
@@ -329,6 +351,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
                       <div className="detail-group"><label>Type</label><p>{selectedAllocation.type}</p></div>
                       <div className="detail-group"><label>Status</label><p>{selectedAllocation.status}</p></div>
                       <div className="detail-group"><label>Date Added</label><p>{selectedAllocation.dateAdded}</p></div>
+                      <div className="detail-group"><label>Description</label><p>{selectedAllocation.description || '—'}</p></div>
                       <div className="detail-group"><label>Added By</label><p>@{selectedAllocation.addedBy}</p></div>
                     </div>
                     <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit</button>
@@ -346,7 +369,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2 className="form-title">Search & Filters</h2>
             <div className="input-form">
-              <div className="input-group"><label>Allocation Name</label><input type="text" value={tempFilters.allocation} onChange={e => setTempFilters({...tempFilters, allocation: e.target.value})} /></div>
+              <div className="input-group"><label>Allocation Name</label><input type="text" value={tempFilters.allocation} onChange={e => setTempFilters({...tempFilters, allocation: e.target.value})} list="allocation-suggestions" /></div>
               <div className="input-group"><label>Status</label><select className="dropdown-select" value={tempFilters.status} onChange={e => setTempFilters({...tempFilters, status: e.target.value})}><option value="">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
               <button className="primary-btn margin-top-lg" onClick={() => { setSearchFilters(tempFilters); setIsSearchModalOpen(false); }}>Search</button>
             </div>

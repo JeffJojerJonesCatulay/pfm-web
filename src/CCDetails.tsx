@@ -281,6 +281,13 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
         </div>
       </section>
 
+      {/* Suggestions Datalist */}
+      <datalist id="cc-suggestions">
+        {Array.from(new Set(items.map(it => it.ccName))).filter(Boolean).map((name, i) => (
+          <option key={i} value={name} />
+        ))}
+      </datalist>
+
       <main className="allocations-main">
         {isSearching && (
           <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap' }}>
@@ -389,7 +396,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
             <form className="login-form">
               <div className="input-group">
                 <label>Credit Card Name</label>
-                <input type="text" placeholder="e.g. Visa Gold" value={newItem.ccName} onChange={e => setNewItem({...newItem, ccName: e.target.value})} />
+                <input type="text" placeholder="e.g. Visa Gold" value={newItem.ccName} onChange={e => setNewItem({...newItem, ccName: e.target.value})} list="cc-suggestions" />
               </div>
               <div className="input-group">
                 <label>CC Acronym</label>
@@ -413,7 +420,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
             <form className="login-form">
               <div className="input-group">
                 <label>Credit Card Name</label>
-                <input type="text" value={editItem.ccName} onChange={e => setEditItem({...editItem, ccName: e.target.value})} />
+                <input type="text" value={editItem.ccName} onChange={e => setEditItem({...editItem, ccName: e.target.value})} list="cc-suggestions" />
               </div>
               <div className="input-group">
                 <label>CC Acronym</label>
@@ -481,7 +488,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
             <div className="login-form">
               <div className="input-group">
                 <label>Credit Card Name</label>
-                <input type="text" placeholder="e.g. Visa Gold" value={tempSearchTerms.ccName} onChange={e => setTempSearchTerms({...tempSearchTerms, ccName: sanitizeInput(e.target.value)})} />
+                <input type="text" placeholder="e.g. Visa Gold" value={tempSearchTerms.ccName} onChange={e => setTempSearchTerms({...tempSearchTerms, ccName: sanitizeInput(e.target.value)})} list="cc-suggestions" />
               </div>
               <div className="input-group">
                 <label>CC Acronym</label>

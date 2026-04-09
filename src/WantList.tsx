@@ -165,12 +165,12 @@ export default function WantList({ onBack }: WantListProps) {
     setIsFetchingDetails(true);
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/id/${id}`, {
+      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/wantlist/id/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const json = await res.json();
-        const detail = json.data || json;
+        const detail = Array.isArray(json.data) ? json.data[0] : (json.data || json);
         setSelectedItem(detail);
         setEditItem(detail);
       }
@@ -299,6 +299,13 @@ export default function WantList({ onBack }: WantListProps) {
         </div>
       </section>
 
+      {/* Suggestions Datalist */}
+      <datalist id="wantlist-suggestions">
+        {Array.from(new Set(items.map(it => it.item))).filter(Boolean).map((name, i) => (
+          <option key={i} value={name} />
+        ))}
+      </datalist>
+
       <main className="allocations-main">
         {Object.keys(searchFilters).length > 0 && (
           <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', overflowX: 'auto', paddingBottom: '8px' }}>
@@ -368,7 +375,7 @@ export default function WantList({ onBack }: WantListProps) {
             <form className="login-form">
               <div className="input-group">
                 <label>Item Name</label>
-                <input type="text" value={newItem.item} onChange={e => setNewItem({...newItem, item: e.target.value})} />
+                <input type="text" value={newItem.item} onChange={e => setNewItem({...newItem, item: e.target.value})} list="wantlist-suggestions" />
               </div>
               <div className="input-group">
                 <label>Estimated Price (₱)</label>
@@ -416,7 +423,7 @@ export default function WantList({ onBack }: WantListProps) {
                     <h2 className="form-title">Edit Item</h2>
                     <div className="input-group">
                       <label>Item Name</label>
-                      <input type="text" value={editItem.item || ''} onChange={e => setEditItem({...editItem, item: e.target.value})} />
+                      <input type="text" value={editItem.item || ''} onChange={e => setEditItem({...editItem, item: e.target.value})} list="wantlist-suggestions" />
                     </div>
                     <div className="input-group">
                       <label>Estimated Price (₱)</label>
@@ -484,7 +491,7 @@ export default function WantList({ onBack }: WantListProps) {
             <div className="login-form">
               <div className="input-group">
                 <label>Item Name</label>
-                <input type="text" value={tempFilters.item} onChange={e => setTempFilters({...tempFilters, item: e.target.value})} />
+                <input type="text" value={tempFilters.item} onChange={e => setTempFilters({...tempFilters, item: e.target.value})} list="wantlist-suggestions" />
               </div>
               <div className="input-group">
                 <label>Affordability</label>

@@ -209,6 +209,9 @@ export default function Dashboard({
               <p style={{ background: '#f3f4f6', display: 'inline-block', padding: '4px 12px', borderRadius: '12px', color: '#6366f1', fontWeight: '600', marginTop: '8px' }}>
                 {PFM_VERSION}
               </p>
+              <p style={{ color: '#9ca3af', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginTop: '8px', letterSpacing: '0.5px' }}>
+                RELEASED: APRIL 09, 2026
+              </p>
             </div>
             <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6' }}>
               A centralized personal finance management platform designed as a multi-repository system to track salary, expenses, credit card usage, subscriptions, net worth, and financial goals in one unified ecosystem.

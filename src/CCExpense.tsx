@@ -633,12 +633,13 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
 
               <div className="input-group">
                 <label>Merchant / Description</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Amazon Purchase" 
-                  value={newExpense.expenseDescription}
-                  onChange={e => setNewExpense({...newExpense, expenseDescription: sanitizeInput(e.target.value)})}
-                />
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Amazon Purchase" 
+                    value={newExpense.expenseDescription}
+                    onChange={e => setNewExpense({...newExpense, expenseDescription: sanitizeInput(e.target.value)})}
+                    list="merchant-suggestions"
+                  />
               </div>
 
               <div className="input-group">
@@ -672,6 +673,13 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
         </div>
       )}
 
+      {/* Suggestions Datalist */}
+      <datalist id="merchant-suggestions">
+        {Array.from(new Set(items.map(it => it.expenseDescription))).map((desc, i) => (
+          <option key={i} value={desc} />
+        ))}
+      </datalist>
+
       {/* Result Dialog */}
       {resultDialog && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
@@ -703,6 +711,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   placeholder="e.g. Amazon" 
                   value={tempFilters.expenseDescription}
                   onChange={e => setTempFilters({ expenseDescription: sanitizeInput(e.target.value) })}
+                  list="merchant-suggestions"
                 />
               </div>
               <button 
@@ -737,6 +746,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         type="text" 
                         value={editExpense?.expenseDescription || ''} 
                         onChange={e => setEditExpense(prev => ({ ...prev!, expenseDescription: sanitizeInput(e.target.value) }))}
+                        list="merchant-suggestions"
                       />
                     </div>
 

@@ -466,6 +466,13 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         </div>
       </section>
 
+      {/* Suggestions Datalist */}
+      <datalist id="tracker-suggestions">
+        {Array.from(new Set(items.map(it => it.expenseDescription))).filter(Boolean).map((desc, i) => (
+          <option key={i} value={desc} />
+        ))}
+      </datalist>
+
       <main className="allocations-main">
         {selectedSalaryId && salaryInfo && items.length > 0 && (
           <section className="summary-banner" style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f3f4f6' }}>
@@ -566,7 +573,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
             <form className="login-form">
                <div className="input-group">
                 <label>Description</label>
-                <input type="text" placeholder="e.g. Lunch out" value={newItem.expenseDescription} onChange={e => setNewItem({...newItem, expenseDescription: e.target.value})} />
+                <input type="text" placeholder="e.g. Lunch out" value={newItem.expenseDescription} onChange={e => setNewItem({...newItem, expenseDescription: e.target.value})} list="tracker-suggestions" />
               </div>
                <div className="input-group">
                  <label>Type</label>
@@ -612,7 +619,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                     <h2 className="form-title">Edit Record</h2>
                     <div className="input-group">
                       <label>Description</label>
-                      <input type="text" value={editItem.expenseDescription || ''} onChange={e => setEditItem({...editItem, expenseDescription: e.target.value})} />
+                      <input type="text" value={editItem.expenseDescription || ''} onChange={e => setEditItem({...editItem, expenseDescription: e.target.value})} list="tracker-suggestions" />
                     </div>
                     <div className="input-group">
                       <label>Type</label>
@@ -755,12 +762,13 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
             <div className="login-form">
               <div className="input-group">
                 <label>Expense Description</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Rice"
-                  value={tempFilters.expenseDescription} 
-                  onChange={e => setTempFilters({...tempFilters, expenseDescription: e.target.value})} 
-                />
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Rice"
+                    value={tempFilters.expenseDescription} 
+                    onChange={e => setTempFilters({...tempFilters, expenseDescription: e.target.value})} 
+                    list="tracker-suggestions"
+                  />
               </div>
               <div className="input-group">
                 <label>Expense Type</label>
