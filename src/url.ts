@@ -79,14 +79,14 @@ export const API_URLS = {
     DELETE: (id: number|string) => `${BASE}/investmentsandsavingsday/delete/${id}`,
   },
   MONTHLY_GROWTH: {
-    BASE: `${BASE}get/monthlygrowth`,
-    GET_BY_ID: (id: number) => `${BASE}get/monthlygrowth/id/${id}`,
-    SEARCH_BY_ALLOC: (allocId: number) => `${BASE}search/monthlygrowth/allocId/${allocId}`,
+    BASE: `${BASE}/get/monthlygrowth`,
+    GET_BY_ID: (id: number) => `${BASE}/get/monthlygrowth/id/${id}`,
+    SEARCH_BY_ALLOC: (allocId: number) => `${BASE}/search/monthlygrowth/allocId/${allocId}`,
   },
   YEARLY_GROWTH: {
-    BASE: `${BASE}get/yearlygrowth`,
-    GET_BY_ID: (id: number) => `${BASE}get/yearlygrowth/id/${id}`,
-    SEARCH_BY_ALLOC: (allocId: number) => `${BASE}search/yearlygrowth/allocId/${allocId}`,
+    BASE: `${BASE}/get/yearlygrowth`,
+    GET_BY_ID: (id: number) => `${BASE}/get/yearlygrowth/id/${id}`,
+    SEARCH_BY_ALLOC: (allocId: number) => `${BASE}/search/yearlygrowth/allocId/${allocId}`,
   },
   NET_WORTH: {
     GET_BY_MONTH_YEAR: `${BASE}/get/networth.monthYear`,
