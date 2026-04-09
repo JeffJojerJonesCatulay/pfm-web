@@ -1,4 +1,4 @@
-const BASE = import.meta.env.PFM_BASE_URL;
+const BASE = import.meta.env.VITE_PFM_BASE_URL;
 
 export const API_URLS = {
   AUTH: {
