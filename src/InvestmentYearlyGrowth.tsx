@@ -1,4 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
 import { API_URLS } from './url';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { ensureFreshToken } from './utils/securityUtils';
@@ -142,6 +153,40 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     return yearFilter === 'All' || item.year.toString() === yearFilter;
   });
 
+  const chartColors = [
+    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
+  ];
+
+  const chartData = useMemo(() => {
+    return [...filteredItems].sort((a, b) => a.year - b.year)
+    .map(it => ({
+      name: it.year.toString(),
+      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      valuation: it.averageCurrentValue,
+      growth: it.averageGrowthRate,
+      allocId: it.allocId,
+      id: it.id
+    }));
+  }, [filteredItems, allocationMap]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900 }}>{data.allocation}</p>
+          <p className="tooltip-label">FY {data.name}</p>
+          <p className="tooltip-value">₱{data.valuation.toLocaleString()}</p>
+          <p style={{ fontSize: '10px', color: data.growth >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+            {data.growth > 0 ? '+' : ''}{data.growth}% Avg. Growth
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header">
@@ -177,7 +222,8 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
       </section>
 
       <main className="allocations-main">
-        <div className="growth-filter-grid" style={{ justifyContent: 'center' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
+          <div className="growth-filter-grid" style={{ justifyContent: 'center' }}>
           <div className="input-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
             <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Filter Year</label>
             <select 
@@ -193,6 +239,65 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
           </div>
         </div>
 
+        {selectedAllocId === null && filteredItems.length > 0 && (
+          <div className="chart-container slide-in-top" style={{ marginTop: '24px', height: 'auto', minHeight: '400px', overflow: 'hidden', padding: '0' }}>
+            <div className="chart-header" style={{ padding: '24px 24px 0' }}>
+              <span className="chart-title">Annual Allocation Performance</span>
+              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>PAST {filteredItems.length} ENTRIES</span>
+            </div>
+            <div className="chart-scroll-container" style={{ padding: '0 24px 24px' }}>
+              <div style={{ minWidth: filteredItems.length > 5 ? `${filteredItems.length * 80}px` : '400px', height: '320px', margin: '0 auto' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 50, bottom: 50, right: 30, left: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis 
+                      dataKey="id" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 600 }}
+                      dy={10}
+                      tickFormatter={(id) => {
+                        const item = chartData.find(d => d.id === id);
+                        return item ? item.name : '';
+                      }}
+                    />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                    <Bar 
+                      dataKey="growth" 
+                      radius={[6, 6, 6, 6]}
+                      maxBarSize={60}
+                      animationDuration={1500}
+                      onClick={(state: any) => state && state.id && handleCardClick(Number(state.id))}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <LabelList 
+                        dataKey="allocation" 
+                        position="top" 
+                        offset={25}
+                        style={{ fontSize: '9px', fontWeight: '800', fill: '#111827', textTransform: 'uppercase' }}
+                      />
+                      <LabelList 
+                        dataKey="growth" 
+                        position="top" 
+                        offset={10}
+                        formatter={(val: any) => `${Number(val) > 0 ? '+' : ''}${val}%`}
+                        style={{ fontSize: '10px', fontWeight: 'bold', fill: '#6b7280' }}
+                      />
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.growth >= 0 ? '#10b981' : '#ef4444'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading && items.length === 0 ? (
           <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Aggregating annual performance...</p>
         ) : filteredItems.length > 0 ? (
@@ -207,7 +312,9 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                 <div className="card-main-content">
                   <div className="alloc-avatar tracker-avatar" style={{ 
                     backgroundColor: '#34d399',
-                    borderRadius: '16px'
+                    borderRadius: '16px',
+                    fontSize: '15px',
+                    fontWeight: 'bold'
                   }}>
                     {item.year}
                   </div>
@@ -253,6 +360,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
             <button className="primary-btn margin-top-md" onClick={() => setIsInitialModalOpen(true)}>Choose Filter Account</button>
           </div>
         )}
+        </div>
       </main>
 
       {/* CHOOSE ACCOUNT OVERLAY */}

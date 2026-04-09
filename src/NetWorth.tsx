@@ -1,4 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Tooltip as ChartTooltip,
+  Legend
+} from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';
 import { ensureFreshToken } from './utils/securityUtils';
@@ -145,6 +153,33 @@ export default function NetWorth({ onBack }: NetWorthProps) {
     }
   };
 
+  const chartColors = [
+    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
+  ];
+
+  const pieData = useMemo(() => {
+    return filteredContributions.map(c => ({
+      name: getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`,
+      value: c.contribution || 0
+    })).filter(it => it.value > 0).sort((a, b) => b.value - a.value);
+  }, [filteredContributions, allocationOptions]);
+
+  const CustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
+          <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
+            ₱{data.value.toLocaleString()}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header">
@@ -169,6 +204,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
       </section>
 
       <main className="allocations-main">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
         <div className="growth-filter-grid">
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter Month</label>
@@ -201,6 +237,44 @@ export default function NetWorth({ onBack }: NetWorthProps) {
             <p style={{ color: '#6b7280', fontWeight: '500' }}>Synchronizing analytical data...</p>
           </div>
         ) : (
+          <>
+            {filteredContributions.length > 0 && (
+              <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f3f4f6' }}>
+                <div className="chart-header" style={{ marginBottom: '20px', padding: 0 }}>
+                  <span className="chart-title" style={{ fontSize: '15px' }}>Portfolio Distribution</span>
+                  <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>{pieData.length} ACCOUNTS</span>
+                </div>
+                <div style={{ height: '300px', width: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                        animationBegin={0}
+                        animationDuration={1500}
+                      >
+                        {pieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<CustomPieTooltip />} />
+                      <Legend 
+                        layout="horizontal" 
+                        verticalAlign="bottom" 
+                        align="center"
+                        wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 600 }}
+                        formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
             <div className="entry-card slide-in-top" style={{ 
               background: 'white', 
               padding: '28px 24px', 
@@ -358,8 +432,9 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                 </div>
               )}
             </div>
-          </section>
+          </>
         )}
+        </div>
       </main>
 
       {/* TOAST SYSTEM */}

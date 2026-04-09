@@ -1,4 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell,
+  Legend,
+  LabelList
+} from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';
 import { ensureFreshToken } from './utils/securityUtils';
@@ -144,13 +156,57 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
     }
   };
 
-  const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
-
+  const monthMap: Record<string, number> = {
+    "January": 0, "February": 1, "March": 2, "April": 3, "May": 4, "June": 5,
+    "July": 6, "August": 7, "September": 8, "October": 9, "November": 10, "December": 11
+  };
   const filteredItems = items.filter(item => {
     const monthMatch = monthFilter === 'All' || item.month === monthFilter;
     const yearMatch = yearFilter === 'All' || item.year.toString() === yearFilter;
     return monthMatch && yearMatch;
   });
+
+
+  const chartColors = [
+    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
+  ];
+
+  const chartData = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      const yearDiff = a.year - b.year;
+      if (yearDiff !== 0) return yearDiff;
+      return monthMap[a.month] - monthMap[b.month];
+    }).map(it => ({
+      name: it.month.substring(0, 3) + ' ' + (it.year % 100),
+      label: it.month.substring(0, 3) + ' ' + (it.year % 100), // X-axis label
+      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      valuation: it.currentValue,
+      growth: it.growthRate,
+      allocId: it.allocId,
+      id: it.id
+    }));
+  }, [filteredItems, allocationMap]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900 }}>{data.allocation}</p>
+          <p className="tooltip-label">{data.name}</p>
+          <p className="tooltip-value">₱{data.valuation.toLocaleString()}</p>
+          <p style={{ fontSize: '10px', color: data.growth >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+            {data.growth > 0 ? '+' : ''}{data.growth}% Growth
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
+
 
   return (
     <div className="app-container allocations-page">
@@ -187,7 +243,10 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
       </section>
 
       <main className="allocations-main">
-        <div className="growth-filter-grid">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
+          
+
+          <div className="growth-filter-grid">
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter Month</label>
             <select 
@@ -215,6 +274,65 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
             </select>
           </div>
         </div>
+
+        {selectedAllocId === null && filteredItems.length > 0 && (
+          <div className="chart-container slide-in-top" style={{ marginTop: '24px', height: 'auto', minHeight: '400px', overflow: 'hidden', padding: '0' }}>
+            <div className="chart-header" style={{ padding: '24px 24px 0' }}>
+              <span className="chart-title">Allocation Performance</span>
+              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>PAST {filteredItems.length} ENTRIES</span>
+            </div>
+            <div className="chart-scroll-container" style={{ padding: '0 24px 24px' }}>
+              <div style={{ minWidth: filteredItems.length > 5 ? `${filteredItems.length * 80}px` : '400px', height: '320px', margin: '0 auto' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 50, bottom: 50, right: 30, left: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis 
+                      dataKey="id" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 600 }}
+                      dy={10}
+                      tickFormatter={(id) => {
+                        const item = chartData.find(d => d.id === id);
+                        return item ? item.name : '';
+                      }}
+                    />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                    <Bar 
+                      dataKey="growth" 
+                      radius={[6, 6, 6, 6]}
+                      maxBarSize={60}
+                      animationDuration={1500}
+                      onClick={(state: any) => state && state.id && handleCardClick(Number(state.id))}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <LabelList 
+                        dataKey="allocation" 
+                        position="top" 
+                        offset={25}
+                        style={{ fontSize: '9px', fontWeight: '800', fill: '#111827', textTransform: 'uppercase' }}
+                      />
+                      <LabelList 
+                        dataKey="growth" 
+                        position="top" 
+                        offset={10}
+                        formatter={(val: any) => `${Number(val) > 0 ? '+' : ''}${val}%`}
+                        style={{ fontSize: '10px', fontWeight: 'bold', fill: '#6b7280' }}
+                      />
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.growth >= 0 ? '#10b981' : '#ef4444'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && items.length === 0 ? (
           <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Analyzing portfolio performance...</p>
@@ -278,6 +396,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
             <button className="primary-btn margin-top-md" onClick={() => setIsInitialModalOpen(true)}>Choose Filter Account</button>
           </div>
         )}
+        </div>
       </main>
 
       {/* CHOOSE ACCOUNT OVERLAY */}

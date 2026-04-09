@@ -1,4 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Area
+} from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';
 import { ensureFreshToken } from './utils/securityUtils';
@@ -205,6 +215,31 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     } catch (e) { setResultDialog({ status: 'failed', message: 'Delete failed.' }); }
   };
 
+  const chartData = useMemo(() => {
+    return [...items].sort((a, b) => new Date(a.date || '').getTime() - new Date(b.date || '').getTime())
+    .map(it => ({
+      name: it.date || '',
+      val: it.salary || 0,
+      id: it.salaryId
+    }));
+  }, [items]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{payload[0].payload.name}</p>
+          <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
+            <p className="tooltip-value" style={{ color: '#6366f1', fontWeight: 800, fontSize: '15px' }}>
+              ₱{payload[0].value.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header">
@@ -231,6 +266,46 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
       </section>
 
       <main className="allocations-main">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
+        
+        {items.length > 1 && (
+          <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <div className="chart-header" style={{ marginBottom: '20px', padding: 0 }}>
+              <span className="chart-title" style={{ fontSize: '15px' }}>Income Growth Trend</span>
+              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>PAST {items.length} PAYOUTS</span>
+            </div>
+            <div style={{ height: '280px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
+                    dy={10}
+                    tickFormatter={(val) => {
+                      const d = new Date(val);
+                      return isNaN(d.getTime()) ? val : `${d.getMonth()+1}/${d.getDate()}`;
+                    }}
+                  />
+                  <YAxis hide domain={['auto', 'auto']} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="val" 
+                    stroke="#6366f1" 
+                    strokeWidth={3}
+                    dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#fff' }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    animationDuration={1500}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {Object.keys(searchFilters).length > 0 && (
           <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap' }}>
             {Object.entries(searchFilters).map(([k, v]) => (
@@ -280,6 +355,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
             <p className="empty-state-text">{loading ? 'Searching your database...' : 'You haven\'t tracked any salary records yet. Start by adding a new payout log!'}</p>
           </div>
         )}
+        </div>
       </main>
 
       <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>

@@ -1,4 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Tooltip as ChartTooltip,
+  Legend
+} from 'recharts';
 import { API_URLS } from './url';
 import { ensureFreshToken, containsProhibitedChars } from './utils/securityUtils';
 import './css/App.css';
@@ -377,6 +385,46 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     }
   };
 
+  const chartColors = [
+    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
+  ];
+
+  const pieData = useMemo(() => {
+    // Group by description and summarize values
+    const grouped: Record<string, { value: number, id?: number }> = {};
+    items.forEach(it => {
+      const desc = it.expenseDescription || 'Other';
+      if (desc === 'Payment') return; // EXCLUDE PAYMENT
+      if (!grouped[desc]) grouped[desc] = { value: 0, id: it.ccExpId };
+      grouped[desc].value += (it.expenseValue || 0);
+    });
+    
+    return Object.entries(grouped)
+      .map(([name, data]) => ({
+        name,
+        value: data.value,
+        id: data.id
+      }))
+      .filter(it => it.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [items]);
+
+  const CustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
+          <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
+            ₱{data.value.toLocaleString()}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header" style={{ height: '160px' }}>
@@ -426,6 +474,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       </section>
 
       <main className="allocations-main">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
         {!selectedCycleId ? (
           <div className="empty-state-container" style={{ marginTop: '40px' }}>
             <div className="empty-state-icon-box" onClick={() => setIsInitialModalOpen(true)} style={{ cursor: 'pointer' }}>
@@ -437,6 +486,45 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           </div>
         ) : (
           <>
+            {selectedCycleId && pieData.length > 0 && (
+              <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f3f4f6' }}>
+                <div className="chart-header" style={{ marginBottom: '20px', padding: 0 }}>
+                  <span className="chart-title" style={{ fontSize: '15px' }}>Spending Distribution</span>
+                  <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>{pieData.length} CATEGORIES</span>
+                </div>
+                <div style={{ height: '300px', width: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                        animationBegin={0}
+                        animationDuration={1500}
+                        onClick={(state: any) => state && state.payload && state.payload.id && fetchExpenseDetail(state.payload.id)}
+                        style={{ cursor: 'pointer', outline: 'none' }}
+                      >
+                        {pieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<CustomPieTooltip />} />
+                      <Legend 
+                        layout="horizontal" 
+                        verticalAlign="bottom" 
+                        align="center"
+                        wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 600 }}
+                        formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
             {/* Billing Cycle Summary Card */}
             <div className="summary-card-container">
               <div className="summary-card">
@@ -542,6 +630,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
             )}
           </>
         )}
+        </div>
       </main>
 
       <button className="fab-btn" onClick={() => { 

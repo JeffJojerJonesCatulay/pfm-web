@@ -1,4 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';
 import { ensureFreshToken } from './utils/securityUtils';
@@ -166,6 +177,35 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
 
+  const chartData = useMemo(() => {
+    return [...items].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map(it => ({
+      name: it.date,
+      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      valuation: it.marketValue,
+      contribution: it.valueAdded,
+      allocId: it.allocId,
+      id: it.id
+    }));
+  }, [items, allocationMap]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900, fontSize: '12px' }}>{data.allocation}</p>
+          <p className="tooltip-label" style={{ fontSize: '10px', color: '#6b7280' }}>Recorded: {data.name}</p>
+          <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
+            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{data.valuation.toLocaleString()}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{data.contribution.toLocaleString()}</p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="app-container allocations-page">
       <section className="header-section allocations-header">
@@ -200,6 +240,77 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
       </section>
 
       <main className="allocations-main">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
+        
+        {selectedAllocId === null && items.length > 0 && (
+          <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', minHeight: '400px', overflow: 'hidden', padding: '0' }}>
+            <div className="chart-header" style={{ padding: '24px 24px 0' }}>
+              <span className="chart-title">Portfolio Valuation Breakdown</span>
+              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>PAST {items.length} ENTRIES</span>
+            </div>
+            <div className="chart-scroll-container" style={{ padding: '0 24px 24px' }}>
+              <div style={{ minWidth: items.length > 5 ? `${items.length * 80}px` : '400px', height: '320px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 50, bottom: 50, right: 30, left: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis 
+                      dataKey="id" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 9, fill: '#9ca3af', fontWeight: 600 }}
+                      dy={10}
+                      tickFormatter={(id) => {
+                        const item = chartData.find(d => d.id === id);
+                        if (!item) return '';
+                        const d = new Date(item.name);
+                        return isNaN(d.getTime()) ? item.name : `${d.getMonth()+1}/${d.getDate()}`;
+                      }}
+                    />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                    <Bar 
+                      dataKey="valuation" 
+                      radius={[6, 6, 6, 6]}
+                      maxBarSize={60}
+                      animationDuration={1500}
+                      onClick={(state: any) => {
+                        if (state && state.id) {
+                          const originalItem = items.find(it => it.id === state.id);
+                          if (originalItem) {
+                            setSelectedItem(originalItem);
+                            setIsModalOpen(true);
+                            fetchAllocDetail(originalItem.allocId);
+                          }
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <LabelList 
+                        dataKey="allocation" 
+                        position="top" 
+                        offset={25}
+                        style={{ fontSize: '9px', fontWeight: '800', fill: '#111827', textTransform: 'uppercase' }}
+                      />
+                      <LabelList 
+                        dataKey="valuation" 
+                        position="top" 
+                        offset={10}
+                        formatter={(val: any) => `₱${Number(val).toLocaleString()}`}
+                        style={{ fontSize: '9px', fontWeight: 'bold', fill: '#6b7280' }}
+                      />
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={index % 2 === 0 ? '#10b981' : '#34d399'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
         {loading && items.length === 0 ? (
           <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Fetching portfolio history...</p>
         ) : items.length > 0 ? (
@@ -258,6 +369,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
             <p className="empty-state-text">Start tracking your portfolio by adding your first entry for any account.</p>
           </div>
         )}
+        </div>
       </main>
 
       {/* CHOOSE ACCOUNT OVERLAY */}
