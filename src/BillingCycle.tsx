@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface BillingCycleItem {
@@ -82,7 +83,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
+      const res = await fetch(`${API_URLS.CC_DETAILS.BASE}?page=0&size=100&sortBy=ccId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -112,7 +113,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -135,7 +136,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
+      const res = await fetch(`${API_URLS.CC_DETAILS.BASE}?page=0&size=100&sortBy=ccId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -175,7 +176,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         addedBy: username
       };
 
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.recordTracker/create/`, {
+      const res = await fetch(API_URLS.BILLING_CYCLE.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -223,7 +224,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         updatedBy: username
       };
 
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.recordTracker/update/${editItem.ccRecId}`, {
+      const res = await fetch(API_URLS.BILLING_CYCLE.UPDATE(editItem.ccRecId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +258,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     if (!token) return;
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.recordTracker/delete/${selectedItem.ccRecId}`, {
+      const res = await fetch(API_URLS.BILLING_CYCLE.DELETE(selectedItem.ccRecId), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -274,8 +275,6 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     }
   };
 
-  // Individual enrichment is removed in favor of the centralized map fetch on mount.
-
   const fetchData = async (pageNumber: number, append: boolean, ccIdFilter = searchFilters['ccId'] || '', statusFilter = searchFilters['status'] || '') => {
     setLoading(true);
     try {
@@ -283,12 +282,14 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
       if (!token) return;
 
       const sStatus = statusFilter ? sanitizeInput(statusFilter) : '';
-      let url = `${import.meta.env.PFM_BASE_URL}get/cc.recordTracker?page=${pageNumber}&size=20&sortBy=ccRecId`;
+      let url = `${API_URLS.BILLING_CYCLE.BASE}?page=${pageNumber}&size=20&sortBy=ccRecId`;
       
-      if (ccIdFilter) {
-        url = `${import.meta.env.PFM_BASE_URL}search/cc.record.tracker/ccId/${ccIdFilter}?page=${pageNumber}&size=20&sortBy=ccRecId${sStatus ? `&status=${sStatus}` : ''}`;
+      if (ccIdFilter && sStatus) {
+        url = `${API_URLS.BILLING_CYCLE.SEARCH_BY_CC(ccIdFilter)}?page=${pageNumber}&size=20&sortBy=ccRecId&status=${sStatus}`;
+      } else if (ccIdFilter) {
+        url = `${API_URLS.BILLING_CYCLE.SEARCH_BY_CC(ccIdFilter)}?page=${pageNumber}&size=20&sortBy=ccRecId`;
       } else if (sStatus) {
-        url = `${import.meta.env.PFM_BASE_URL}search/cc.record.tracker?page=${pageNumber}&size=20&sortBy=ccRecId&status=${sStatus}`;
+        url = `${API_URLS.BILLING_CYCLE.SEARCH_GLOBAL}?page=${pageNumber}&size=20&sortBy=ccRecId&status=${sStatus}`;
       }
 
       const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });

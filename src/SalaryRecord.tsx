@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface SalaryRecordItem {
@@ -32,7 +33,7 @@ const SearchIcon = () => (
 );
 
 const PenIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20h9"></path>
     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
   </svg>
@@ -83,7 +84,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -109,10 +110,10 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/salarytracker?page=${pageNumber}&size=10&sortBy=salaryId`;
+      let apiUrl = `${API_URLS.SALARY_TRACKER.BASE}?page=${pageNumber}&size=10&sortBy=salaryId`;
       
       if (Object.keys(currentFilters).length > 0) {
-        apiUrl = `${import.meta.env.PFM_BASE_URL}search/salarytracker?page=${pageNumber}&size=10&sortBy=salaryId`;
+        apiUrl = `${API_URLS.SALARY_TRACKER.SEARCH}?page=${pageNumber}&size=10&sortBy=salaryId`;
         const params = new URLSearchParams();
         Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
         apiUrl += `&${params.toString()}`;
@@ -139,7 +140,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     setIsModalOpen(true);
     setIsFetchingDetails(true);
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salarytracker/id/${id}`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -158,7 +159,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     try {
       const username = localStorage.getItem('pfm_username') || 'system';
       const body = { salary: Number(newItem.salary), date: newItem.date, status: newItem.status, addedBy: username };
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salarytracker/create/`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body)
@@ -182,7 +183,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     if (Object.keys(updatedFields).length === 0) return;
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salarytracker/update/${selectedItem.salaryId}`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.UPDATE(selectedItem.salaryId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(updatedFields)
@@ -200,7 +201,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
     const token = await ensureFreshToken();
     if (!selectedItem || !selectedItem.salaryId || !token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salarytracker/delete/${selectedItem.salaryId}`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.DELETE(selectedItem.salaryId), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

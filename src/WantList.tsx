@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface WantListItem {
@@ -89,7 +90,7 @@ export default function WantList({ onBack }: WantListProps) {
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -123,10 +124,10 @@ export default function WantList({ onBack }: WantListProps) {
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/wantlist?page=${pageNumber}&size=10&sortBy=id`;
+      let apiUrl = `${API_URLS.WANT_LIST.BASE}?page=${pageNumber}&size=10&sortBy=id`;
       
       if (Object.keys(currentFilters).length > 0) {
-        apiUrl = `${import.meta.env.PFM_BASE_URL}search/wantlist?page=${pageNumber}&size=10&sortBy=id`;
+        apiUrl = `${API_URLS.WANT_LIST.SEARCH}?page=${pageNumber}&size=10&sortBy=id`;
         const stringParams: string[] = [];
         Object.entries(currentFilters).forEach(([key, val]) => {
           let strVal = val as string;
@@ -165,7 +166,7 @@ export default function WantList({ onBack }: WantListProps) {
     setIsFetchingDetails(true);
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/wantlist/id/${id}`, {
+      const res = await fetch(API_URLS.WANT_LIST.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -187,7 +188,7 @@ export default function WantList({ onBack }: WantListProps) {
     setIsCreating(true);
     try {
       const username = localStorage.getItem('pfm_username') || 'system';
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/create/`, {
+      const res = await fetch(API_URLS.WANT_LIST.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -236,7 +237,7 @@ export default function WantList({ onBack }: WantListProps) {
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/update/${selectedItem.id}`, {
+      const res = await fetch(API_URLS.WANT_LIST.UPDATE(selectedItem.id), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,7 @@ export default function WantList({ onBack }: WantListProps) {
     if (!selectedItem || !selectedItem.id || !token) return;
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}wantlist/delete/${selectedItem.id}`, {
+      const res = await fetch(API_URLS.WANT_LIST.DELETE(selectedItem.id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

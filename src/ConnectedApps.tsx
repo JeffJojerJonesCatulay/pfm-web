@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface ConnectedAppItem {
@@ -88,7 +89,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     const isExpired = Date.now() - tokenTime > 1000 * 60 * 10; 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -111,7 +112,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     try {
       const token = await ensureFreshToken();
       if (!token) return;
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
+      const res = await fetch(`${API_URLS.CC_DETAILS.BASE}?page=0&size=100&sortBy=ccId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -139,18 +140,15 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
       const token = await ensureFreshToken();
       if (!token) return;
 
-      let url = `${import.meta.env.PFM_BASE_URL}get/cc.connectedApp?page=${pageNumber}&size=20&sortBy=id`;
+      let url = `${API_URLS.CONNECTED_APPS.BASE}?page=${pageNumber}&size=20&sortBy=id`;
       
-      if (selectedCcId) {
-        url = `${import.meta.env.PFM_BASE_URL}search/cc.connectedApp/ccId/${selectedCcId}?page=${pageNumber}&size=10&sortBy=id`;
-        
-        if (isSearching) {
-          if (searchTerms.connectedApp) url += `&connectedApp=${searchTerms.connectedApp.replace(/ /g, '+')}`;
-          if (searchTerms.subscription) url += `&subscription=${searchTerms.subscription.replace(/ /g, '+')}`;
-          if (searchTerms.autoDebit) url += `&autoDebit=${searchTerms.autoDebit.replace(/ /g, '+')}`;
-        }
+      if (selectedCcId && isSearching) {
+        url = `${API_URLS.CONNECTED_APPS.SEARCH_BY_CC(selectedCcId)}?page=${pageNumber}&size=10&sortBy=id`;
       } else if (isSearching) {
-        url = `${import.meta.env.PFM_BASE_URL}search/cc.connectedApp?page=${pageNumber}&size=20&sortBy=id`;
+        url = `${API_URLS.CONNECTED_APPS.SEARCH_GLOBAL}?page=${pageNumber}&size=20&sortBy=id`;
+      }
+
+      if (isSearching) {
         if (searchTerms.connectedApp) url += `&connectedApp=${searchTerms.connectedApp.replace(/ /g, '+')}`;
         if (searchTerms.subscription) url += `&subscription=${searchTerms.subscription.replace(/ /g, '+')}`;
         if (searchTerms.autoDebit) url += `&autoDebit=${searchTerms.autoDebit.replace(/ /g, '+')}`;
@@ -216,7 +214,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     };
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.connectedApp/create/`, {
+      const res = await fetch(API_URLS.CONNECTED_APPS.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -251,7 +249,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     };
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.connectedApp/update/${editItem.id}`, {
+      const res = await fetch(API_URLS.CONNECTED_APPS.UPDATE(editItem.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -280,7 +278,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     if (!token) return;
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.connectedApp/delete/${id}`, {
+      const res = await fetch(API_URLS.CONNECTED_APPS.DELETE(id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

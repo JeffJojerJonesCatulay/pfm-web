@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface LoginProps {
@@ -22,7 +23,7 @@ export default function Login({ onLogin }: LoginProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+      const response = await fetch(API_URLS.AUTH.AUTHENTICATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -60,7 +61,7 @@ export default function Login({ onLogin }: LoginProps) {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate/create`, {
+      const response = await fetch(API_URLS.AUTH.REGISTER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

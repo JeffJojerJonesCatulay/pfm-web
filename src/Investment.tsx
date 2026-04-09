@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface InvestmentItem {
@@ -84,7 +85,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -107,7 +108,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=0&size=100&sortBy=allocId`, {
+      const res = await fetch(`${API_URLS.ALLOCATIONS.BASE}?page=0&size=100&sortBy=allocId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -127,11 +128,11 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     if (!token) { setLoading(false); return; }
 
     try {
-      const endpoint = allocId 
-        ? `search/investmentsandsavingsday/allocId/${allocId}?page=${pageNumber}&size=20&sortBy=id`
-        : `get/investmentsandsavingsday?page=${pageNumber}&size=20&sortBy=id`;
+      const baseUrl = allocId 
+        ? API_URLS.INVESTMENT.SEARCH_BY_ALLOC(allocId)
+        : API_URLS.INVESTMENT.BASE;
 
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}${endpoint}`, {
+      const res = await fetch(`${baseUrl}?page=${pageNumber}&size=20&sortBy=id`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -156,7 +157,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     const token = await ensureFreshToken();
     if (!token) { setIsFetchingAlloc(false); return; }
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping/allocId/${allocId}`, {
+      const res = await fetch(API_URLS.ALLOCATIONS.GET_BY_ID(allocId), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -174,7 +175,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     if (!token) { setIsCreating(false); return; }
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}investmentsandsavingsday/create/`, {
+      const res = await fetch(API_URLS.INVESTMENT.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ...newItem, addedBy: localStorage.getItem('pfm_username') || 'jeff' })

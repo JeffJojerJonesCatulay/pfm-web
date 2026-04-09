@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface GrowthRecord {
@@ -79,7 +80,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -102,7 +103,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=0&size=100&sortBy=allocId`, {
+      const res = await fetch(`${API_URLS.ALLOCATIONS.BASE}?page=0&size=100&sortBy=allocId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -123,11 +124,10 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
     if (!token) { setLoading(false); return; }
 
     try {
-      const endpoint = allocId 
-        ? `search/monthlygrowth/allocId/${allocId}?page=${pageNumber}&size=20&sortBy=id`
-        : `get/monthlygrowth?page=${pageNumber}&size=20&sortBy=id`;
-
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}${endpoint}`, {
+      const baseUrl = allocId 
+        ? API_URLS.MONTHLY_GROWTH.SEARCH_BY_ALLOC(allocId)
+        : API_URLS.MONTHLY_GROWTH.BASE;
+      const res = await fetch(`${baseUrl}?page=${pageNumber}&size=20&sortBy=id`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -153,7 +153,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
     if (!token) { setIsFetchingDetail(false); return; }
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/monthlygrowth/id/${id}`, {
+      const res = await fetch(API_URLS.MONTHLY_GROWTH.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

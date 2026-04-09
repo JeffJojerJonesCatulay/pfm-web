@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface AllocationItem {
@@ -85,7 +86,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -115,10 +116,10 @@ export default function Allocations({ onBack }: AllocationsProps) {
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=${pageNumber}&size=10&sortBy=allocId`;
+      let apiUrl = `${API_URLS.ALLOCATIONS.BASE}?page=${pageNumber}&size=10&sortBy=allocId`;
       
       if (Object.keys(currentFilters).length > 0) {
-        apiUrl = `${import.meta.env.PFM_BASE_URL}search/allocation.mapping?page=${pageNumber}&size=10&sortBy=allocId`;
+        apiUrl = `${API_URLS.ALLOCATIONS.SEARCH}?page=${pageNumber}&size=10&sortBy=allocId`;
         const stringParams: string[] = [];
         Object.entries(currentFilters).forEach(([k, v]) => {
           stringParams.push(`${encodeURIComponent(k)}=${encodeURIComponent(v as string).replace(/%20/g, '+')}`);
@@ -147,7 +148,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
     setIsModalOpen(true);
     setIsFetchingDetails(true);
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping/allocId/${id}`, {
+      const res = await fetch(API_URLS.ALLOCATIONS.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -165,7 +166,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
     setIsCreating(true);
     try {
       const username = localStorage.getItem('pfm_username') || 'system';
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/create/`, {
+      const res = await fetch(API_URLS.ALLOCATIONS.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 
@@ -200,7 +201,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/update/${selectedAllocation.allocId}`, {
+      const res = await fetch(API_URLS.ALLOCATIONS.UPDATE(selectedAllocation.allocId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(updatedFields)
@@ -218,7 +219,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
     const token = await ensureFreshToken();
     if (!selectedAllocation || !selectedAllocation.allocId || !token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}allocation.mapping/delete/${selectedAllocation.allocId}`, {
+      const res = await fetch(API_URLS.ALLOCATIONS.DELETE(selectedAllocation.allocId), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

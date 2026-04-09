@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import './css/App.css';
 
@@ -71,7 +72,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -94,7 +95,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=0&size=100&sortBy=allocId`, {
+      const res = await fetch(`${API_URLS.ALLOCATIONS.BASE}?page=0&size=100&sortBy=allocId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -115,11 +116,10 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     if (!token) { setLoading(false); return; }
 
     try {
-      const endpoint = allocId 
-        ? `search/yearlygrowth/allocId/${allocId}?page=${pageNumber}&size=20&sortBy=id`
-        : `get/yearlygrowth?page=${pageNumber}&size=20&sortBy=id`;
-
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}${endpoint}`, {
+      const baseUrl = allocId 
+        ? API_URLS.YEARLY_GROWTH.SEARCH_BY_ALLOC(allocId)
+        : API_URLS.YEARLY_GROWTH.BASE;
+      const res = await fetch(`${baseUrl}?page=${pageNumber}&size=20&sortBy=id`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -145,7 +145,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     if (!token) { setIsFetchingDetail(false); return; }
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/yearlygrowth/id/${id}`, {
+      const res = await fetch(API_URLS.YEARLY_GROWTH.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

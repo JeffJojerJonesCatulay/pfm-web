@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface CCDetailItem {
@@ -103,7 +104,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -130,10 +131,10 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
       const token = await ensureFreshToken();
       if (!token) return;
 
-      let url = `${import.meta.env.PFM_BASE_URL}get/cc.details?page=${pageNumber}&size=20&sortBy=ccId`;
+      let url = `${API_URLS.CC_DETAILS.BASE}?page=${pageNumber}&size=20&sortBy=ccId`;
       
       if (isSearching) {
-        url = `${import.meta.env.PFM_BASE_URL}search/cc.details?page=${pageNumber}&size=20&sortBy=ccId`;
+        url = `${API_URLS.CC_DETAILS.SEARCH}?page=${pageNumber}&size=20&sortBy=ccId`;
         if (searchTerms.ccName) url += `&ccName=${searchTerms.ccName.replace(/ /g, '+')}`;
         if (searchTerms.ccLastDigit) url += `&ccLastDigit=${searchTerms.ccLastDigit.replace(/ /g, '+')}`;
         if (searchTerms.ccAcronym) url += `&ccAcronym=${searchTerms.ccAcronym.replace(/ /g, '+')}`;
@@ -182,7 +183,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     };
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.details/create/`, {
+      const res = await fetch(API_URLS.CC_DETAILS.CREATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -212,7 +213,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     };
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.details/update/${editItem.ccId}`, {
+      const res = await fetch(API_URLS.CC_DETAILS.UPDATE(editItem.ccId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -233,7 +234,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
     if (!token) return;
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.details/delete/${id}`, {
+      const res = await fetch(API_URLS.CC_DETAILS.DELETE(id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

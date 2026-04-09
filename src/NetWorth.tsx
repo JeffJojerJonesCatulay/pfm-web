@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface NetWorthProps {
@@ -51,7 +52,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -74,11 +75,11 @@ export default function NetWorth({ onBack }: NetWorthProps) {
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/allocation.mapping?page=0&size=100&sortBy=allocId`, {
+      const allocRes = await fetch(`${API_URLS.ALLOCATIONS.BASE}?page=0&size=100&sortBy=allocId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        const json = await res.json();
+      if (allocRes.ok) {
+        const json = await allocRes.json();
         const content = json.data?.content || json.content || [];
         setAllocationOptions(content);
       }
@@ -90,11 +91,11 @@ export default function NetWorth({ onBack }: NetWorthProps) {
     const token = await ensureFreshToken();
     if (!token) { setLoading(false); return; }
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/monthlygrowth?page=0&size=100&sortBy=id`, {
+      const growthRes = await fetch(`${API_URLS.MONTHLY_GROWTH.BASE}?page=0&size=100&sortBy=id`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        const json = await res.json();
+      if (growthRes.ok) {
+        const json = await growthRes.json();
         setMonthlyGrowthData(json.data?.content || json.content || []);
       }
     } catch (e) {
@@ -127,7 +128,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
     if (!username) return;
 
     try {
-      const checkRes = await fetch(`${import.meta.env.PFM_BASE_URL}get/networth.monthYear?month=${monthFilter}&year=${yearFilter}`, {
+      const checkRes = await fetch(`${API_URLS.NET_WORTH.GET_BY_MONTH_YEAR}?month=${monthFilter}&year=${yearFilter}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -145,7 +146,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
           const existingId = existingData[0].id;
           const body = { id: existingId, ...payload, updateBy: username, updateDate: new Date().toISOString().split('T')[0] };
           
-          const res = await fetch(`${import.meta.env.PFM_BASE_URL}networth/update/${existingId}`, {
+          const res = await fetch(API_URLS.NET_WORTH.UPDATE(existingId), {
             method: 'PUT',
             headers: { 
               'Authorization': `Bearer ${token}`,
@@ -156,7 +157,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
           if (res.ok) showToast('Net Worth synchronized successfully.');
         } else {
           const body = { ...payload, addedBy: username, dateAdded: new Date().toISOString().split('T')[0] };
-          const res = await fetch(`${import.meta.env.PFM_BASE_URL}networth/create/`, {
+          const res = await fetch(API_URLS.NET_WORTH.CREATE, {
             method: 'POST',
             headers: { 
               'Authorization': `Bearer ${token}`,

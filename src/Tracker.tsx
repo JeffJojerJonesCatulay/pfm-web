@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface TrackerItem {
@@ -113,7 +114,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -149,7 +150,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salarytracker/id/${id}`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -170,7 +171,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/salarytracker?page=0&size=100&sortBy=salaryId`, {
+      const res = await fetch(`${API_URLS.SALARY_TRACKER.SEARCH}?page=0&size=100&sortBy=salaryId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -185,7 +186,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/salarytracker?page=0&size=100&sortBy=salaryId&status=Active`, {
+      const res = await fetch(`${API_URLS.SALARY_TRACKER.SEARCH}?page=0&size=100&sortBy=salaryId&status=Active`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -218,11 +219,11 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      const baseEndpoint = selectedSalaryId 
-        ? `search/salaryexpensetracker/salaryId/${selectedSalaryId}`
-        : `get/salaryexpensetracker`;
+      const baseUrl = selectedSalaryId 
+        ? API_URLS.SALARY_EXPENSE.BASE_BY_SALARY(selectedSalaryId)
+        : API_URLS.SALARY_EXPENSE.BASE_GLOBAL;
 
-      let apiUrl = `${import.meta.env.PFM_BASE_URL}${baseEndpoint}?page=${pageNumber}&size=20&sortBy=id`;
+      let apiUrl = `${baseUrl}?page=${pageNumber}&size=20&sortBy=id`;
       
       const params = new URLSearchParams();
       Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
@@ -260,7 +261,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     setIsFetchingDetails(true);
     
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salaryexpensetracker/id/${id}`, {
+      const res = await fetch(API_URLS.SALARY_EXPENSE.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -284,7 +285,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     
     try {
       const username = localStorage.getItem('pfm_username') || 'system';
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/create/`, {
+      const res = await fetch(API_URLS.SALARY_EXPENSE.CREATE, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -342,7 +343,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     updatedFields.updateBy = localStorage.getItem('pfm_username') || 'Unknown';
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/update/${selectedItem.id}`, {
+      const res = await fetch(API_URLS.SALARY_EXPENSE.UPDATE(selectedItem.id), {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -372,7 +373,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     if (!selectedItem || !selectedItem.id || !token) return;
 
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}salaryexpensetracker/delete/${selectedItem.id}`, {
+      const res = await fetch(API_URLS.SALARY_EXPENSE.DELETE(selectedItem.id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -394,7 +395,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
     setIsSalaryInfoLoading(true);
     setShowSalaryOverlay(true);
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/salarytracker/id/${id}`, {
+      const res = await fetch(API_URLS.SALARY_TRACKER.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

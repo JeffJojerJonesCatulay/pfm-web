@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URLS } from './url';
 import './css/App.css';
 
 interface CCExpenseItem {
@@ -109,7 +110,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
 
     if (!token || isExpired) {
       try {
-        const authRes = await fetch(`${import.meta.env.PFM_BASE_URL}authenticate`, {
+        const authRes = await fetch(API_URLS.AUTH.AUTHENTICATE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
@@ -144,7 +145,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     }
 
     try {
-      let url = `${import.meta.env.PFM_BASE_URL}search/cc.record.expense/ccRecId/${ccRecId}?page=${pageNumber}&size=20&sortBy=ccExpId`;
+      let url = `${API_URLS.CC_EXPENSE.BASE(ccRecId)}?page=${pageNumber}&size=20&sortBy=ccExpId`;
       if (filters.expenseDescription) {
         url += `&expenseDescription=${filters.expenseDescription.replace(/ /g, '+')}`;
       }
@@ -176,7 +177,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     try {
       // Fetch a larger set to ensure full cycle summary or use a dedicated summary endpoint if available
       // Here we use 500 as a reasonable ceiling for a single billing cycle's transactions
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}search/cc.record.expense/ccRecId/${ccRecId}?page=0&size=500&sortBy=ccExpId`, {
+      const res = await fetch(`${API_URLS.CC_EXPENSE.BASE(ccRecId)}?page=0&size=500&sortBy=ccExpId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -222,7 +223,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/delete/${selectedExpense.ccExpId}`, {
+      const res = await fetch(API_URLS.CC_EXPENSE.DELETE(selectedExpense.ccExpId), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -246,7 +247,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       const { addedBy, ...cleanPayload } = editExpense; // User wants to change addedBy to updatedBy for update
       const payload = { ...cleanPayload, updatedBy: username };
 
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/update/${editExpense.ccExpId}`, {
+      const res = await fetch(API_URLS.CC_EXPENSE.UPDATE(editExpense.ccExpId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +270,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     const token = await ensureFreshToken();
     if (!token) return {};
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.details?page=0&size=100&sortBy=ccId`, {
+      const res = await fetch(`${API_URLS.CC_DETAILS.BASE}?page=0&size=100&sortBy=ccId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -288,7 +289,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     const token = await ensureFreshToken();
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.recordTracker?page=0&size=100&sortBy=ccRecId`, {
+      const res = await fetch(`${API_URLS.CC_RECORD_TRACKER.BASE}?page=0&size=100&sortBy=ccRecId`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -335,7 +336,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     if (!token) { setIsCreating(false); return; }
     try {
       const username = localStorage.getItem('pfm_username') || 'jeff';
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}cc.record.expense/create/`, {
+      const res = await fetch(API_URLS.CC_EXPENSE.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -366,7 +367,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     setFetchingDetail(true);
     setIsDetailModalOpen(true);
     try {
-      const res = await fetch(`${import.meta.env.PFM_BASE_URL}get/cc.record.expense/ccExpId/${id}`, {
+      const res = await fetch(API_URLS.CC_EXPENSE.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
