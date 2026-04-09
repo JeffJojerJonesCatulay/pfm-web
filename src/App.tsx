@@ -54,6 +54,7 @@ function App() {
             onNavigateToTracker={() => setCurrentView('tracker')}
             onNavigateToCCDetails={() => setCurrentView('ccdetails')}
             onNavigateToCCExpense={() => setCurrentView('ccexpense')}
+            onNavigateToConnectedApps={() => setCurrentView('connectedApps')}
             onNavigateToInvestment={() => setCurrentView('investment')}
             onNavigateToNetWorth={() => setCurrentView('netWorth')}
           />

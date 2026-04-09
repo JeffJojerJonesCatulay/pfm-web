@@ -302,18 +302,22 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         <div className="header-pattern-mask"></div>
         
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}>
-            <BackIcon />
-          </button>
-          
-          <div className="header-titles">
-            <h1 className="allocations-title">Billing Cycles</h1>
-            <p className="allocations-subtitle">{totalElements} RECORDS</p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
- 
-          <button className="icon-btn search-trigger" onClick={() => { setIsSearchModalOpen(true); if (ccOptions.length === 0) fetchCcOptions(); }}>
-            <SearchIcon />
-          </button>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Billing Cycles</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">{totalElements} RECORDS</p>
+            </div>
+          </div>
+          
+          <div className="header-right">
+            <button className="icon-btn search-trigger" onClick={() => { setIsSearchModalOpen(true); if (ccOptions.length === 0) fetchCcOptions(); }} aria-label="Search">
+              <SearchIcon />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -347,30 +351,35 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
               {items.map((it, i) => (
                 <div 
                   key={`${it.ccRecId}-${i}`} 
-                  className="allocation-card clickable-card"
+                  className="allocation-card clickable-card entry-card slide-in-top" 
+                  style={{ animationDelay: `${i * 40}ms` }}
                   onClick={() => { setSelectedItem({...it}); setIsEditing(false); setIsModalOpen(true); }}
                 >
-                  <div className="alloc-avatar" style={{ backgroundColor: getColor(it.status) }}>
-                    {ccDetailsMap[it.ccId || 0] ? getInitial(ccDetailsMap[it.ccId!].ccName) : getInitial(it.status)}
+                  <div className="card-main-content">
+                    <div className="alloc-avatar tracker-avatar" style={{ backgroundColor: getColor(it.status) }}>
+                      {ccDetailsMap[it.ccId || 0] ? getInitial(ccDetailsMap[it.ccId!].ccName) : getInitial(it.status)}
+                    </div>
+                    <div className="alloc-info">
+                      <h3 className="alloc-name">
+                        {ccDetailsMap[it.ccId || 0]?.ccName || `Reference #${it.ccRecId}`}
+                      </h3>
+                      <p className="alloc-meta">
+                        Cutoff: {it.dateTo} &bull; Due: {it.dueDate}
+                      </p>
+                    </div>
                   </div>
-                  <div className="alloc-info" style={{ flex: 1 }}>
-                    <h3 className="alloc-name">
-                      {ccDetailsMap[it.ccId || 0]?.ccName || `Reference #${it.ccRecId}`}
-                    </h3>
-                    <p className="alloc-meta">
-                      Cutoff: <span style={{ fontWeight: 600 }}>{it.dateTo}</span> | Due: <span style={{ fontWeight: 600 }}>{it.dueDate}</span>
-                    </p>
-                  </div>
-                  <div className="alloc-date">
+                  
+                  <div className="card-value-display">
                     <span style={{ 
                       padding: '4px 12px', 
                       borderRadius: '12px', 
                       backgroundColor: getColor(it.status) + '15',
                       color: getColor(it.status), 
-                      fontSize: '13px',
-                      fontWeight: 700,
+                      fontSize: '11px',
+                      fontWeight: 800,
                       textTransform: 'uppercase',
-                      letterSpacing: '0.4px'
+                      letterSpacing: '0.5px',
+                      border: `1px solid ${getColor(it.status)}30`
                     }}>
                       {it.status}
                     </span>

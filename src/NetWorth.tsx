@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import deskIllustrationUrl from './assets/desk_illustration.png';
 import { API_URLS } from './url';
 import { ensureFreshToken } from './utils/securityUtils';
 import './css/App.css';
@@ -150,46 +151,43 @@ export default function NetWorth({ onBack }: NetWorthProps) {
         <div className="header-pattern"></div>
         <div className="header-pattern-mask"></div>
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}><BackIcon /></button>
-          <div className="header-titles">
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
+          </div>
+          
+          <div className="header-titles centered-titles">
             <h1 className="allocations-title">Net Worth</h1>
-            <p className="allocations-subtitle">
-              MONTHLY PERFORMANCE SNAPSHOT
-            </p>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">MONTHLY PERFORMANCE SNAPSHOT</p>
+            </div>
+          </div>
+          
+          <div className="header-right">
+            {/* Action placeholder */}
           </div>
         </div>
       </section>
 
       <main className="allocations-main">
-        <div className="filter-bar" style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          maxWidth: '600px', 
-          margin: '10px auto 24px', 
-          padding: '0 16px',
-          position: 'relative',
-          zIndex: 20
-        }}>
-          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563', marginBottom: '6px', display: 'block' }}>FILTER MONTH</label>
+        <div className="growth-filter-grid">
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter Month</label>
             <select 
               className="dropdown-select" 
               value={monthFilter} 
               onChange={e => setMonthFilter(e.target.value)}
-              style={{ background: 'white', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', boxSizing: 'border-box' }}
             >
               {MONTHS.map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
           </div>
-          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563', marginBottom: '6px', display: 'block' }}>FILTER YEAR</label>
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter Year</label>
             <select 
               className="dropdown-select" 
               value={yearFilter} 
               onChange={e => setYearFilter(e.target.value)}
-              style={{ background: 'white', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', boxSizing: 'border-box' }}
             >
               {YEARS.map(y => (
                 <option key={y} value={y.toString()}>{y}</option>
@@ -203,8 +201,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
             <p style={{ color: '#6b7280', fontWeight: '500' }}>Synchronizing analytical data...</p>
           </div>
         ) : (
-          <section className="contributions-summary-card" style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '0 16px' }}>
-            <div style={{ 
+            <div className="entry-card slide-in-top" style={{ 
               background: 'white', 
               padding: '28px 24px', 
               borderRadius: '24px', 
@@ -213,7 +210,19 @@ export default function NetWorth({ onBack }: NetWorthProps) {
               position: 'relative',
               zIndex: 10
             }}>
-              <h4 style={{ fontSize: '12px', color: '#111827', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '900', marginBottom: '24px', textAlign: 'center', borderBottom: '2px solid #f3f4f6', paddingBottom: '16px' }}>Performance Breakdown</h4>
+              <h4 style={{ 
+                fontSize: '11px', 
+                color: '#6b7280', 
+                textTransform: 'uppercase', 
+                letterSpacing: '1.5px', 
+                fontWeight: '900', 
+                marginBottom: '24px', 
+                textAlign: 'center', 
+                borderBottom: '2px solid #f3f4f6', 
+                paddingBottom: '16px' 
+              }}>
+                Performance Breakdown
+              </h4>
               
               {filteredContributions.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -338,8 +347,14 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '10px' }}>
-                   <p style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0 }}>No Data for Selected Period</p>
+                <div className="empty-state-container" style={{ padding: '0', boxShadow: 'none', background: 'transparent' }}>
+                  <div className="empty-state-icon-box" style={{ width: '120px', height: '120px' }}>
+                    <img src={deskIllustrationUrl} alt="Empty" className="empty-state-illustration" />
+                  </div>
+                  <h3 className="empty-state-title" style={{ fontSize: '16px' }}>No Data Found</h3>
+                  <p className="empty-state-text" style={{ fontSize: '13px' }}>
+                    There are no analytical records for the selected month and year.
+                  </p>
                 </div>
               )}
             </div>

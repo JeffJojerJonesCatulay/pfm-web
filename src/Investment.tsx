@@ -172,22 +172,27 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
         <div className="header-pattern"></div>
         <div className="header-pattern-mask"></div>
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}><BackIcon /></button>
-          <div className="header-titles">
-            <h1 className="allocations-title">Investments</h1>
-            <p className="allocations-subtitle">
-              {selectedAllocId ? (
-                `${allocationMap[selectedAllocId] || '...'} • ${totalElements} RECORDS`
-              ) : `ALL PORTFOLIOS • ${totalElements} RECORDS`}
-            </p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Investments</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">
+                {selectedAllocId ? (
+                  `${allocationMap[selectedAllocId] || '...'} • ${totalElements} RECORDS`
+                ) : `ALL PORTFOLIOS • ${totalElements} RECORDS`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="header-right">
             <button 
-              className="premium-pill-btn" 
+              className="premium-action-pill" 
               onClick={() => setIsInitialModalOpen(true)}
-              style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
             >
-              <PenIcon />
+              <div className="pill-icon"><PenIcon /></div>
               <span>{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
             </button>
           </div>
@@ -200,18 +205,30 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
         ) : items.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
             {items.map((item, i) => (
-              <div key={item.id || i} className="allocation-card clickable-card" onClick={() => { 
-                setSelectedItem(item); 
-                setIsModalOpen(true); 
-                fetchAllocDetail(item.allocId);
-              }}>
-                <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>{getInitial(allocationMap[item.allocId])}</div>
-                <div className="alloc-info">
-                  <h3 className="alloc-name">{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
-                  <p className="alloc-meta">{item.date}</p>
+              <div 
+                key={item.id || i} 
+                className="allocation-card clickable-card entry-card slide-in-top" 
+                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => { 
+                  setSelectedItem(item); 
+                  setIsModalOpen(true); 
+                  fetchAllocDetail(item.allocId);
+                }}
+              >
+                <div className="card-main-content">
+                  <div className="alloc-avatar investment-avatar" style={{ backgroundColor: '#10b981' }}>
+                    {getInitial(allocationMap[item.allocId])}
+                  </div>
+                  <div className="alloc-info">
+                    <h3 className="alloc-name">{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
+                    <p className="alloc-meta">{item.date}</p>
+                  </div>
                 </div>
-                <div className="alloc-date" style={{ fontWeight: 'bold', color: '#111827' }}>
-                  ₱ {item.marketValue?.toLocaleString()}
+                <div className="card-value-display">
+                  <div className="card-amount-wrapper">
+                    <span className="currency-symbol">₱</span>
+                    <span className="value-amount">{item.marketValue?.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ))}

@@ -384,39 +384,41 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
         <div className="header-pattern-mask"></div>
         
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}>
-            <BackIcon />
-          </button>
-          
-          <div className="header-titles">
-            <h1 className="allocations-title">CC Expense</h1>
-            <p className="allocations-subtitle">
-              {selectedCycleId ? `${cycleMap[selectedCycleId] || 'Cycle'} (${totalElements} Records)` : 'No Cycle Selected'}
-            </p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
           
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">CC Expense</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">
+                {selectedCycleId ? `${cycleMap[selectedCycleId] || 'Cycle'} (${totalElements} Records)` : 'No Cycle Selected'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="header-right" style={{ gap: '10px' }}>
             {selectedCycleId && (
               <>
                 <button 
-                  className="premium-pill-btn" 
+                  className="premium-action-pill" 
                   onClick={() => setIsInitialModalOpen(true)}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+                  title="Switch Period"
                 >
-                  <WalletIcon />
-                  <span>Switch Period</span>
+                  <div className="pill-icon"><WalletIcon /></div>
+                  <span className="hide-mobile">Period</span>
                 </button>
                 <button 
-                  className="premium-pill-btn" 
+                  className="premium-action-pill" 
                   onClick={onNavigateToBillingCycle}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+                  title="Billing Cycles"
                 >
-                  <WalletIcon />
-                  <span>Billing Cycles</span>
+                  <div className="pill-icon"><WalletIcon /></div>
+                  <span className="hide-mobile">Cycles</span>
                 </button>
               </>
             )}
-            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
+            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
               <SearchIcon />
             </button>
           </div>
@@ -436,28 +438,30 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
         ) : (
           <>
             {/* Billing Cycle Summary Card */}
-            <div style={{ maxWidth: '600px', margin: '0 auto 24px', padding: '0 16px' }}>
-              <div style={{ 
-                background: 'white', 
-                borderRadius: '24px', 
-                padding: '24px', 
-                boxShadow: '0 10px 30px rgba(0,0,0,0.06)', 
-                border: '1px solid #f3f4f6',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '20px'
-              }}>
-                <div style={{ textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
-                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Total Expense</p>
-                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#6366f1', margin: 0 }}>₱{cycleSummary.total.toLocaleString()}</p>
+            <div className="summary-card-container">
+              <div className="summary-card">
+                <div className="summary-item">
+                  <span className="summary-label">Total Expense</span>
+                  <div className="summary-value" style={{ color: '#6366f1' }}>
+                    <span style={{ fontSize: '14px' }}>₱</span>
+                    {cycleSummary.total.toLocaleString()}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'center', borderRight: '1px solid #f3f4f6' }}>
-                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Payment</p>
-                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#10b981', margin: 0 }}>₱{cycleSummary.payment.toLocaleString()}</p>
+                
+                <div className="summary-item">
+                  <span className="summary-label">Payment</span>
+                  <div className="summary-value" style={{ color: '#10b981' }}>
+                    <span style={{ fontSize: '14px' }}>₱</span>
+                    {cycleSummary.payment.toLocaleString()}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '11px', color: '#6b7280', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Remaining</p>
-                  <p style={{ fontSize: '20px', fontWeight: '900', color: '#f59e0b', margin: 0 }}>₱{cycleSummary.remaining.toLocaleString()}</p>
+                
+                <div className="summary-item">
+                  <span className="summary-label" style={{ color: '#f59e0b' }}>Remaining</span>
+                  <div className="summary-value" style={{ color: '#f59e0b' }}>
+                    <span style={{ fontSize: '14px' }}>₱</span>
+                    {cycleSummary.remaining.toLocaleString()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -498,11 +502,13 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       {cycleMap[it.ccRecId] || `Cycle #${it.ccRecId}`}
                     </p>
                   </div>
-                  <div className="alloc-date" style={{ 
-                    fontWeight: 'bold', 
-                    color: it.expenseDescription === 'Payment' ? '#10b981' : 'inherit' 
-                  }}>
-                    ₱ {it.expenseValue?.toLocaleString()}
+                  <div className="card-value-display">
+                    <div className="card-amount-wrapper">
+                      <span className="currency-symbol">₱</span>
+                      <span className="value-amount" style={{ color: it.expenseDescription === 'Payment' ? '#10b981' : 'inherit' }}>
+                        {it.expenseValue?.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}

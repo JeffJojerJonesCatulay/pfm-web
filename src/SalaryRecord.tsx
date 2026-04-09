@@ -211,12 +211,22 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
         <div className="header-pattern"></div>
         <div className="header-pattern-mask"></div>
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}><BackIcon /></button>
-          <div className="header-titles">
-            <h1 className="allocations-title">Salary Records</h1>
-            <p className="allocations-subtitle">{totalElements} LOGS</p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          <button className="icon-btn" onClick={() => setIsSearchModalOpen(true)}><SearchIcon /></button>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Salary Records</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">{totalElements} RECORDS</p>
+            </div>
+          </div>
+
+          <div className="header-right">
+            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
+              <SearchIcon />
+            </button>
+          </div>
         </div>
       </section>
 

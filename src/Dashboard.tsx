@@ -87,6 +87,7 @@ interface DashboardProps {
   onNavigateToTracker: () => void;
   onNavigateToCCDetails: () => void;
   onNavigateToCCExpense?: () => void;
+  onNavigateToConnectedApps?: () => void;
   onNavigateToInvestment?: () => void;
   onNavigateToNetWorth?: () => void;
 }
@@ -95,9 +96,10 @@ export default function Dashboard({
   onLogout, 
   onNavigateToAllocations, 
   onNavigateToWantList, 
-  onNavigateToTracker, 
+  onNavigateToTracker,
   onNavigateToCCDetails, 
   onNavigateToCCExpense,
+  onNavigateToConnectedApps,
   onNavigateToInvestment,
   onNavigateToNetWorth
 }: DashboardProps) {
@@ -139,7 +141,7 @@ export default function Dashboard({
               <div className="user-info">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
                   <h2 className="user-name" style={{ margin: 0 }}>@{username}</h2>
-                  <button 
+                   <button 
                     onClick={() => {
                       localStorage.removeItem('pfm_username');
                       localStorage.removeItem('pfm_password');
@@ -147,8 +149,8 @@ export default function Dashboard({
                       localStorage.removeItem('pfm_token_time');
                       onLogout();
                     }}
-                    className="secondary-btn"
-                    style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', width: 'auto', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.2)' }}
+                    className="secondary-btn logout-btn-mobile"
+                    style={{ padding: '10px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', width: 'auto', background: 'rgba(255, 255, 255, 0.15)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px' }}
                   >
                     <LogoutIcon />
                     Logout
@@ -183,9 +185,9 @@ export default function Dashboard({
                   t.name === 'Allocation' ? onNavigateToAllocations : 
                   t.name === 'Investment' ? onNavigateToInvestment :
                   t.name === 'Want Lists' ? onNavigateToWantList : 
-                  t.name === 'Tracker' ? onNavigateToTracker : 
-                  t.name === 'CC Details' ? onNavigateToCCDetails :
+                  t.name === 'Tracker' ? onNavigateToTracker :                   t.name === 'CC Details' ? onNavigateToCCDetails :
                   t.name === 'CC Expense' ? onNavigateToCCExpense :
+                  t.name === 'Connected Apps' ? onNavigateToConnectedApps :
                   t.name === 'Net Worth' ? onNavigateToNetWorth :
                   t.name === 'About' ? () => setShowAbout(true) : undefined
                 }

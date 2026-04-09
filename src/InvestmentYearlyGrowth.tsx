@@ -83,6 +83,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
 
   const fetchData = async (pageNumber = 0, allocId = selectedAllocId) => {
     setLoading(true);
+    setItems([]); // Clear current list immediately for visual feedback
     const token = await ensureFreshToken();
     if (!token) { setLoading(false); return; }
 
@@ -101,6 +102,10 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
         setTotalPages(payload.totalPages || 1);
         setIsLastPage(payload.last !== undefined ? payload.last : true);
         setPage(pageNumber);
+      } else {
+        setItems([]);
+        setTotalPages(1);
+        setIsLastPage(true);
       }
     } catch (e) {
       console.error('Error fetching yearly growth data:', e);
@@ -142,44 +147,43 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
       <section className="header-section allocations-header">
         <div className="header-pattern"></div>
         <div className="header-pattern-mask"></div>
-        <div className="header-inner allocations-header-inner" style={{ maxWidth: '600px' }}>
-          <button className="icon-btn" onClick={onBack}><BackIcon /></button>
-          <div className="header-titles">
-            <h1 className="allocations-title">Yearly Growth</h1>
-            <p className="allocations-subtitle">
-              {selectedAllocId ? (
-                `${allocationMap[selectedAllocId] || '...'} • ANNUAL TRENDS`
-              ) : `ALL PORTFOLIOS • ${items.length} RECORDS`}
-            </p>
+        <div className="header-inner allocations-header-inner">
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Yearly Growth</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">
+                {selectedAllocId ? (
+                  `${allocationMap[selectedAllocId] || '...'} • ANNUAL TRENDS`
+                ) : `ALL PORTFOLIOS • ${items.length} RECORDS`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="header-right">
             <button 
-              className="premium-pill-btn" 
+              className="premium-action-pill" 
               onClick={() => setIsInitialModalOpen(true)}
-              style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
+              title="Select Account"
             >
-              <PenIcon />
-              <span>{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
+              <div className="pill-icon"><PenIcon /></div>
+              <span className="hide-mobile">{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
             </button>
           </div>
         </div>
       </section>
 
       <main className="allocations-main">
-        <div className="filter-bar" style={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          maxWidth: '600px', 
-          margin: '20px auto 28px', 
-          padding: '0 16px' 
-        }}>
-          <div className="input-group" style={{ flex: 1, maxWidth: '300px', marginBottom: 0 }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563', marginBottom: '8px', display: 'block', textAlign: 'center' }}>FILTER YEAR</label>
+        <div className="growth-filter-grid" style={{ justifyContent: 'center' }}>
+          <div className="input-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
+            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center' }}>Filter Year</label>
             <select 
               className="dropdown-select" 
               value={yearFilter} 
               onChange={e => setYearFilter(e.target.value)}
-              style={{ background: 'white', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', boxSizing: 'border-box', width: '100%' }}
             >
               <option value="All">All Years</option>
               {YEARS.map(y => (
@@ -194,31 +198,31 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
         ) : filteredItems.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
             {filteredItems.map((item, i) => (
-              <div key={item.id || i} className="allocation-card clickable-card" style={{ padding: '20px' }} onClick={() => handleCardClick(item.id)}>
-                <div className="alloc-avatar" style={{ 
-                  backgroundColor: '#34d399',
-                  borderRadius: '16px',
-                  width: '56px',
-                  height: '56px'
-                }}>
-                  {item.year}
-                </div>
-                <div className="alloc-info" style={{ gap: '2px' }}>
-                  <h3 className="alloc-name" style={{ fontSize: '18px' }}>{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
-                  <p className="alloc-meta" style={{ fontWeight: '500', color: '#111827' }}>
-                    Annual Statistics Audit
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                    Avg. Contribution: ₱ {item.averageContribution?.toLocaleString()}
-                  </p>
-                </div>
-                <div className="alloc-date" style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: '800', color: '#10b981', fontSize: '1.1rem' }}>
-                    +{item.averageGrowthRate}%
+              <div 
+                key={item.id || i} 
+                className="allocation-card clickable-card entry-card slide-in-top" 
+                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => handleCardClick(item.id)}
+              >
+                <div className="card-main-content">
+                  <div className="alloc-avatar tracker-avatar" style={{ 
+                    backgroundColor: '#34d399',
+                    borderRadius: '16px'
+                  }}>
+                    {item.year}
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#111827', marginTop: '4px' }}>
-                    ₱ {item.averageCurrentValue?.toLocaleString()}
+                  <div className="alloc-info" style={{ gap: '2px' }}>
+                    <h3 className="alloc-name" style={{ fontSize: '17px' }}>{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
+                    <p className="alloc-meta">Annual Audit &bull; ₱ {item.averageContribution?.toLocaleString()}/mo avg.</p>
                   </div>
+                </div>
+                
+                <div className="card-value-display">
+                  <div className="card-amount-wrapper">
+                    <span className="currency-symbol" style={{ color: '#059669' }}>+</span>
+                    <span className="value-amount" style={{ color: '#10b981' }}>{item.averageGrowthRate}%</span>
+                  </div>
+                  <div className="card-date-label">Avg. Value: ₱ {item.averageCurrentValue?.toLocaleString()}</div>
                 </div>
               </div>
             ))}

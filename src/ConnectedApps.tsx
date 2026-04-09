@@ -300,28 +300,29 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
         <div className="header-pattern-mask"></div>
         
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}>
-            <BackIcon />
-          </button>
-          
-          <div className="header-titles">
-            <h1 className="allocations-title">Connected Apps</h1>
-            <p className="allocations-subtitle">{totalElements} APPS CONNECTED</p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
           
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Connected Apps</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">{totalElements} APPS CONNECTED</p>
+            </div>
+          </div>
+          
+          <div className="header-right" style={{ gap: '10px' }}>
             <button 
-              className="premium-pill-btn" 
+              className="premium-action-pill" 
               onClick={() => { fetchCCOptions(); setIsCCModalOpen(true); }}
+              title="Filter by Card"
             >
-              <FilterIcon />
-              <span>Filter CC</span>
+              <div className="pill-icon"><FilterIcon /></div>
+              <span className="hide-mobile">Filter CC</span>
             </button>
-            {selectedCcId && (
-              <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
-                <SearchIcon />
-              </button>
-            )}
+            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
+              <SearchIcon />
+            </button>
           </div>
         </div>
       </section>
@@ -353,18 +354,29 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
         {items.length > 0 ? (
           <div className="allocations-list" style={{ paddingBottom: '20px' }}>
           {items.map((it, i) => (
-            <div key={it.id || i} className="allocation-card clickable-card" onClick={() => { setSelectedItem(it); setIsModalOpen(true); }}>
-              <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>
-                {getInitial(it.connectedApp)}
+            <div 
+              key={it.id || i} 
+              className="allocation-card clickable-card entry-card slide-in-top" 
+              style={{ animationDelay: `${i * 40}ms` }}
+              onClick={() => { setSelectedItem(it); setIsModalOpen(true); }}
+            >
+              <div className="card-main-content">
+                <div className="alloc-avatar tracker-avatar" style={{ backgroundColor: '#10b981' }}>
+                  {getInitial(it.connectedApp)}
+                </div>
+                <div className="alloc-info">
+                  <h3 className="alloc-name">{it.connectedApp} ({it.subscription})</h3>
+                  <p className="alloc-meta">
+                    {it.autoDebit} &bull; {ccOptions.find(c => c.ccId === it.ccId)?.ccAcronym || 'Credit Card'}
+                  </p>
+                </div>
               </div>
-              <div className="alloc-info">
-                <h3 className="alloc-name">{it.connectedApp} ({it.subscription})</h3>
-                <p className="alloc-meta">
-                  ₱{(it.amount || 0).toLocaleString()} &bull; {it.autoDebit} 
-                </p>
-              </div>
-              <div className="alloc-date">
-                {it.dateAdded}
+              <div className="card-value-display">
+                <div className="card-amount-wrapper">
+                  <span className="currency-symbol">₱</span>
+                  <span className="value-amount">{(it.amount || 0).toLocaleString()}</span>
+                </div>
+                <div className="card-date-label">{it.dateAdded}</div>
               </div>
             </div>
           ))}

@@ -42,6 +42,13 @@ const WalletIcon = () => (
   </svg>
 );
 
+const CreditCardIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+    <line x1="1" y1="10" x2="23" y2="10"></line>
+  </svg>
+);
+
 interface CCDetailsProps {
   onBack: () => void;
   onNavigateToConnectedApps: () => void;
@@ -242,24 +249,27 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
         <div className="header-pattern-mask"></div>
         
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}>
-            <BackIcon />
-          </button>
-          
-          <div className="header-titles">
-            <h1 className="allocations-title">CC Details</h1>
-            <p className="allocations-subtitle">{totalElements} CARDS REGISTERED</p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">CC Details</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">{totalElements} CARDS REGISTERED</p>
+            </div>
+          </div>
+
+          <div className="header-right" style={{ gap: '10px' }}>
             <button 
-              className="premium-pill-btn" 
+              className="premium-action-pill" 
               onClick={onNavigateToConnectedApps}
+              title="Connected Apps"
             >
-              <WalletIcon />
-              <span>Connected Apps</span>
+              <div className="pill-icon"><CreditCardIcon /></div>
+              <span className="hide-mobile">Apps</span>
             </button>
-            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
+            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
               <SearchIcon />
             </button>
           </div>

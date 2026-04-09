@@ -423,47 +423,43 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         <div className="header-pattern-mask"></div>
         
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}>
-            <BackIcon />
-          </button>
-          
-          <div className="header-titles">
-            <h1 className="allocations-title">Tracker</h1>
-            <p className="allocations-subtitle">
-              {selectedSalaryId ? (
-                `SALARY DATE: ${allSalaries.find(s => s.salaryId === selectedSalaryId)?.date || '...'} • ${totalElements} RECORDS`
-              ) : `${totalElements} RECORDS`}
-            </p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {selectedSalaryId && (
-              <button 
-                className="premium-pill-btn" 
-                onClick={() => setIsInitialModalOpen(true)}
-                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
-              >
-                <PenIcon />
-                <span>Switch Salary</span>
-              </button>
-            )}
-            {!selectedSalaryId && (
-              <button 
-                className="premium-pill-btn" 
-                onClick={() => setIsInitialModalOpen(true)}
-                style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.3)' }}
-              >
-                <WalletIcon />
-                <span>Select Salary</span>
-              </button>
-            )}
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Tracker</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">
+                {selectedSalaryId ? (
+                  `SALARY DATE: ${allSalaries.find(s => s.salaryId === selectedSalaryId)?.date || '...'} • ${totalElements} RECORDS`
+                ) : `${totalElements} RECORDS`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="header-right" style={{ gap: '12px' }}>
             <button 
-              className="premium-pill-btn" 
-              onClick={onNavigateToSalaryRecord}
+              className="premium-action-pill" 
+              onClick={() => setIsInitialModalOpen(true)}
+              title={selectedSalaryId ? 'Switch Salary' : 'Select Salary'}
             >
-              <WalletIcon />
-              <span>Salary History</span>
+              <div className="pill-icon">
+                {selectedSalaryId ? <PenIcon /> : <WalletIcon />}
+              </div>
+              <span className="hide-mobile">{selectedSalaryId ? 'Switch Salary' : 'Select Salary'}</span>
             </button>
-            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)}>
+
+            <button 
+              className="premium-action-pill" 
+              onClick={onNavigateToSalaryRecord}
+              title="Salary History"
+            >
+              <div className="pill-icon"><WalletIcon /></div>
+              <span className="hide-mobile">History</span>
+            </button>
+
+            <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
               <SearchIcon />
             </button>
           </div>
@@ -520,21 +516,27 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
             {items.map((it, i) => (
               <div 
                 key={it.id || i} 
-                className="allocation-card clickable-card"
+                className="allocation-card clickable-card entry-card slide-in-top"
+                style={{ animationDelay: `${i * 40}ms` }}
                 onClick={() => handleCardClick(it.id)}
               >
-                <div className="alloc-avatar" style={{ backgroundColor: getColor(it.expenseType) }}>
-                  {getInitial(it.expenseDescription)}
+                <div className="card-main-content">
+                  <div className="alloc-avatar tracker-avatar" style={{ backgroundColor: getColor(it.expenseType) }}>
+                    {getInitial(it.expenseDescription)}
+                  </div>
+                  <div className="alloc-info">
+                    <h3 className="alloc-name">{it.expenseDescription || 'Unnamed'}</h3>
+                    <p className="alloc-meta">
+                      {it.expenseType || 'Unknown'} • {it.status}
+                    </p>
+                  </div>
                 </div>
-                <div className="alloc-info">
-                  <h3 className="alloc-name">{it.expenseDescription || 'Unnamed'}</h3>
-                  <p className="alloc-meta">
-                    {it.expenseType || 'Unknown'} &bull; ₱{(it.expenseValue || 0).toLocaleString()} &bull; 
-                    <span style={{ marginLeft: '4px', fontWeight: '500' }}>{it.status}</span>
-                  </p>
-                </div>
-                <div className="alloc-date">
-                  {it.date}
+                <div className="card-value-display">
+                  <div className="card-amount-wrapper">
+                    <span className="currency-symbol">₱</span>
+                    <span className="value-amount">{(it.expenseValue || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="card-date-label">{it.date}</div>
                 </div>
               </div>
             ))}

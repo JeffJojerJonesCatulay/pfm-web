@@ -244,15 +244,23 @@ export default function Allocations({ onBack }: AllocationsProps) {
         <div className="header-pattern"></div>
         <div className="header-pattern-mask"></div>
         <div className="header-inner allocations-header-inner">
-          <button className="icon-btn" onClick={onBack}><BackIcon /></button>
-          <div className="header-titles">
-            <h1 className="allocations-title">Allocations</h1>
-            <p className="allocations-subtitle">{totalElements} ALLOCATIONS</p>
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
           </div>
-          <button className="icon-btn" onClick={() => {
-            setTempFilters({ allocation: searchFilters.allocation || '', type: searchFilters.type || '', status: searchFilters.status || '' });
-            setIsSearchModalOpen(true);
-          }}><SearchIcon /></button>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Allocations</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">{totalElements} ALLOCATIONS</p>
+            </div>
+          </div>
+          
+          <div className="header-right">
+            <button className="icon-btn" onClick={() => {
+              setTempFilters({ allocation: searchFilters.allocation || '', type: searchFilters.type || '', status: searchFilters.status || '' });
+              setIsSearchModalOpen(true);
+            }} aria-label="Search"><SearchIcon /></button>
+          </div>
         </div>
       </section>
 
