@@ -219,16 +219,17 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       if (!token) return;
 
       const currentFilters = filtersOverride !== undefined ? filtersOverride : searchFilters;
-      const baseUrl = selectedSalaryId 
+      const hasFilters = Object.values(currentFilters).some(v => v !== '');
+
+      let baseUrl = selectedSalaryId 
         ? API_URLS.SALARY_EXPENSE.BASE_BY_SALARY(selectedSalaryId)
-        : API_URLS.SALARY_EXPENSE.BASE_GLOBAL;
+        : (hasFilters ? API_URLS.SALARY_EXPENSE.SEARCH : API_URLS.SALARY_EXPENSE.BASE_GLOBAL);
 
       let apiUrl = `${baseUrl}?page=${pageNumber}&size=20&sortBy=id`;
       
       const params = new URLSearchParams();
       Object.entries(currentFilters).forEach(([k, v]) => { if (v) params.append(k, v as string); });
       let queryStr = params.toString();
-      // Replace %20 with + as requested
       queryStr = queryStr.replace(/%20/g, '+');
       if (queryStr) apiUrl += `&${queryStr}`;
 
@@ -687,9 +688,8 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                         ) : <p>—</p>}
                       </div>
                       <div className="detail-group"><label>Transaction Date</label><p>{selectedItem.date}</p></div>
-                      <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded || '—'}</p></div>
-                      <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                      <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'} {selectedItem.updateBy ? `(@${selectedItem.updateBy})` : ''}</p></div>
+                      <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
+                      <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
                     <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
                   </>
@@ -814,8 +814,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 <div className="detail-group"><label>Salary Date</label><p>{salaryInfo.date}</p></div>
                 <div className="detail-group"><label>Status</label><p>{salaryInfo.status}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{salaryInfo.dateAdded}</p></div>
-                <div className="detail-group"><label>Added By</label><p>@{salaryInfo.addedBy}</p></div>
-                <div className="detail-group"><label>Last Updated</label><p>{salaryInfo.updateDate || '—'} {salaryInfo.updateBy ? `(@${salaryInfo.updateBy})` : ''}</p></div>
+                <div className="detail-group"><label>Last Updated</label><p>{salaryInfo.updateDate || '—'}</p></div>
               </div>
             ) : <p>No salary record found for this transaction.</p>}
             <button className="primary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => setShowSalaryOverlay(false)}>Close View</button>

@@ -349,9 +349,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                     <div className="detail-grid">
                       <div className="detail-group"><label>Salary Date</label><p>{selectedItem.date}</p></div>
                       <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
-                      <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                      <div className="detail-group"><label>Update Date</label><p>{selectedItem.updateDate || '—'}</p></div>
-                      <div className="detail-group"><label>Updated By</label><p>{selectedItem.updateBy ? `@${selectedItem.updateBy}` : '—'}</p></div>
+                      <div className="detail-group"><label>Last Updated</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
                     <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
                   </>

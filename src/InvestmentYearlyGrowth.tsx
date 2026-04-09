@@ -382,12 +382,12 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                       <p style={{ fontWeight: '600' }}>₱ {selectedItem.totalContribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
-                      <label>Audit Source</label>
-                      <p>@{selectedItem.addedBy}</p>
+                      <label>Date Added</label>
+                      <p>{selectedItem.dateAdded || '—'}</p>
                     </div>
                     <div className="detail-group">
                       <label>Last Updated</label>
-                      <p style={{ fontSize: '12px' }}>{selectedItem.updateDate || selectedItem.dateAdded}</p>
+                      <p>{selectedItem.updateDate || '—'}</p>
                     </div>
                   </div>
 

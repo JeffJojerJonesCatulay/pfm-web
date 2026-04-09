@@ -123,10 +123,8 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   };
 
   useEffect(() => {
-    if (isCreateModalOpen) {
-      fetchCCOptions();
-    }
-  }, [isCreateModalOpen]);
+    fetchCCOptions();
+  }, []);
 
   const sanitizeInput = (val: string) => {
     return val.replace(/[\\/;\%\$\*\!\`\~]|--/g, '');
@@ -142,7 +140,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
 
       let url = `${API_URLS.CONNECTED_APPS.BASE}?page=${pageNumber}&size=20&sortBy=id`;
       
-      if (selectedCcId && isSearching) {
+      if (selectedCcId) {
         url = `${API_URLS.CONNECTED_APPS.SEARCH_BY_CC(selectedCcId)}?page=${pageNumber}&size=10&sortBy=id`;
       } else if (isSearching) {
         url = `${API_URLS.CONNECTED_APPS.SEARCH_GLOBAL}?page=${pageNumber}&size=20&sortBy=id`;
@@ -424,15 +422,22 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                 <h2>{selectedItem.connectedApp}</h2>
                 <p>{selectedItem.subscription}</p>
               </div>
-              
               <div className="detail-grid">
+                <div className="detail-group">
+                  <label>Source Card</label>
+                  <p>
+                    {ccOptions.find(c => c.ccId === selectedItem.ccId) 
+                      ? `${ccOptions.find(c => c.ccId === selectedItem.ccId).ccName} (**** ${ccOptions.find(c => c.ccId === selectedItem.ccId).ccLastDigit})`
+                      : 'Not Linked'
+                    }
+                  </p>
+                </div>
                 <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.amount || 0).toLocaleString()}</p></div>
                 <div className="detail-group"><label>Auto Debit</label><p>{selectedItem.autoDebit}</p></div>
                 <div className="detail-group"><label>Next Billing</label><p>{selectedItem.date}</p></div>
                 <div className="detail-group"><label>Remarks</label><p>{selectedItem.remarks || 'No remarks'}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
-                <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'} {selectedItem.updateBy ? `(@${selectedItem.updateBy})` : ''}</p></div>
+                <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>

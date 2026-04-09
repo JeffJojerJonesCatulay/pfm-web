@@ -46,8 +46,8 @@ const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
 
 export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGrowthProps) {
   const [items, setItems] = useState<GrowthRecord[]>([]);
-  const [monthFilter, setMonthFilter] = useState<string>('All');
-  const [yearFilter, setYearFilter] = useState<string>('All');
+  const [monthFilter, setMonthFilter] = useState<string>(MONTHS[new Date().getMonth()]);
+  const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
   const [allocationMap, setAllocationMap] = useState<Record<number, string>>({});
@@ -406,12 +406,12 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                       <p style={{ fontWeight: '600' }}>₱ {selectedItem.totalContribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
-                      <label>Added By</label>
-                      <p>@{selectedItem.addedBy}</p>
+                      <label>Date Added</label>
+                      <p>{selectedItem.dateAdded || '—'}</p>
                     </div>
                     <div className="detail-group">
-                      <label>Updated At</label>
-                      <p style={{ fontSize: '12px' }}>{selectedItem.updateDate || selectedItem.dateAdded}</p>
+                      <label>Last Updated</label>
+                      <p>{selectedItem.updateDate || '—'}</p>
                     </div>
                   </div>
 

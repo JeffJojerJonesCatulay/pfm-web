@@ -566,8 +566,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                     <div className="detail-group"><label>Cutoff Date</label><p>{selectedItem.dateTo}</p></div>
                     <div className="detail-group"><label>Due Date</label><p>{selectedItem.dueDate}</p></div>
                     <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded || '—'}</p></div>
-                    <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                    <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'} {selectedItem.updatedBy ? `(@${selectedItem.updatedBy})` : ''}</p></div>
+                    <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
                   </div>
 
                   {ccDetailsMap[selectedItem.ccId || 0] && (

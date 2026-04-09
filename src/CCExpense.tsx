@@ -816,9 +816,12 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         <p>{cycleMap[selectedExpense.ccRecId] || 'Unknown Cycle'}</p>
                       </div>
                       <div className="detail-group">
-                        <label>Attribution</label>
-                        <p>Added by @{selectedExpense.addedBy} {selectedExpense.dateAdded ? `on ${selectedExpense.dateAdded.split(' ')[0]}` : ''}</p>
-                        {selectedExpense.updatedBy && <p style={{ fontSize: '11px', marginTop: '4px' }}>Last updated by @{selectedExpense.updatedBy}</p>}
+                        <label>Date Added</label>
+                        <p>{selectedExpense.dateAdded ? selectedExpense.dateAdded.split(' ')[0] : '—'}</p>
+                      </div>
+                      <div className="detail-group">
+                        <label>Last Updated</label>
+                        <p>{selectedExpense.updateDate || '—'}</p>
                       </div>
                     </div>
 

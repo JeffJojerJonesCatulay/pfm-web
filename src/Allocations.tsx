@@ -57,13 +57,13 @@ export default function Allocations({ onBack }: AllocationsProps) {
     allocation: '', 
     type: 'Savings', 
     status: 'Active',
-    description: '' 
+    description: 'Accessible' 
   });
   const [isCreating, setIsCreating] = useState(false);
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchFilters, setSearchFilters] = useState<any>({});
-  const [tempFilters, setTempFilters] = useState<any>({ allocation: '', type: '', status: '' });
+  const [tempFilters, setTempFilters] = useState<any>({ allocation: '', status: '' });
 
   const [confirmDialog, setConfirmDialog] = useState<{type: 'update' | 'delete', message: string} | null>(null);
   const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
@@ -261,8 +261,8 @@ export default function Allocations({ onBack }: AllocationsProps) {
 
       <main className="allocations-main">
         {Object.keys(searchFilters).length > 0 && (
-          <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '0 auto 16px', flexWrap: 'wrap' }}>
-            {Object.entries(searchFilters).map(([k, v]) => (
+          <div style={{ display: 'flex', gap: '8px', maxWidth: '600px', margin: '16px auto', flexWrap: 'wrap' }}>
+            {Object.entries(searchFilters).filter(([_, v]) => v).map(([k, v]) => (
               <div key={k} style={{ background: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontWeight: 600 }}>{k}:</span> {v as string}
                 <button onClick={() => { const nf = {...searchFilters}; delete nf[k]; setSearchFilters(nf); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
@@ -319,9 +319,19 @@ export default function Allocations({ onBack }: AllocationsProps) {
             <h2 className="form-title">Add Allocation</h2>
             <form className="login-form">
               <div className="input-group"><label>Allocation Name</label><input type="text" value={newAllocation.allocation} onChange={e => setNewAllocation({...newAllocation, allocation: e.target.value})} list="allocation-suggestions" /></div>
-              <div className="input-group"><label>Type</label><select className="dropdown-select" value={newAllocation.type} onChange={e => setNewAllocation({...newAllocation, type: e.target.value})}><option value="Savings">Savings</option><option value="Investment">Investment</option><option value="Expense">Expense</option></select></div>
+              <div className="input-group"><label>Type</label><select className="dropdown-select" value={newAllocation.type} onChange={e => setNewAllocation({...newAllocation, type: e.target.value})}><option value="Savings">Savings</option><option value="Investment">Investment</option></select></div>
               <div className="input-group"><label>Status</label><select className="dropdown-select" value={newAllocation.status} onChange={e => setNewAllocation({...newAllocation, status: e.target.value})}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-              <div className="input-group"><label>Description</label><input type="text" value={newAllocation.description} onChange={e => setNewAllocation({...newAllocation, description: e.target.value})} /></div>
+              <div className="input-group">
+                <label>Description</label>
+                <select 
+                  className="dropdown-select" 
+                  value={newAllocation.description} 
+                  onChange={e => setNewAllocation({...newAllocation, description: e.target.value})}
+                >
+                  <option value="Accessible">Accessible</option>
+                  <option value="Not Accessible">Not Accessible</option>
+                </select>
+              </div>
               <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate} disabled={isCreating}>{isCreating ? 'Processing...' : 'Save Allocation'}</button>
             </form>
           </div>
@@ -339,7 +349,17 @@ export default function Allocations({ onBack }: AllocationsProps) {
                     <div className="input-group"><label>Allocation Name</label><input type="text" value={editItem.allocation || ''} onChange={e => setEditItem({...editItem, allocation: e.target.value})} list="allocation-suggestions" /></div>
                     <div className="input-group"><label>Type</label><select className="dropdown-select" value={editItem.type || ''} onChange={e => setEditItem({...editItem, type: e.target.value})}><option value="Savings">Savings</option><option value="Investment">Investment</option><option value="Expense">Expense</option></select></div>
                     <div className="input-group"><label>Status</label><select className="dropdown-select" value={editItem.status || ''} onChange={e => setEditItem({...editItem, status: e.target.value})}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-                    <div className="input-group"><label>Description</label><input type="text" value={editItem.description || ''} onChange={e => setEditItem({...editItem, description: e.target.value})} /></div>
+                    <div className="input-group">
+                      <label>Description</label>
+                      <select 
+                        className="dropdown-select" 
+                        value={editItem.description || 'Accessible'} 
+                        onChange={e => setEditItem({...editItem, description: e.target.value})}
+                      >
+                        <option value="Accessible">Accessible</option>
+                        <option value="Not Accessible">Not Accessible</option>
+                      </select>
+                    </div>
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                       <button className="primary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog({type: 'update', message: 'Update?'})}>Update</button>
                       <button className="secondary-btn" style={{ flex: 1, borderColor: '#e53e3e', color: '#e53e3e' }} onClick={() => setConfirmDialog({type: 'delete', message: 'Delete?'})}>Delete</button>
@@ -353,7 +373,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
                       <div className="detail-group"><label>Status</label><p>{selectedAllocation.status}</p></div>
                       <div className="detail-group"><label>Date Added</label><p>{selectedAllocation.dateAdded}</p></div>
                       <div className="detail-group"><label>Description</label><p>{selectedAllocation.description || '—'}</p></div>
-                      <div className="detail-group"><label>Added By</label><p>@{selectedAllocation.addedBy}</p></div>
+                      <div className="detail-group"><label>Last Updated</label><p>{selectedAllocation.updateDate || '—'}</p></div>
                     </div>
                     <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit</button>
                   </>
@@ -372,7 +392,11 @@ export default function Allocations({ onBack }: AllocationsProps) {
             <div className="input-form">
               <div className="input-group"><label>Allocation Name</label><input type="text" value={tempFilters.allocation} onChange={e => setTempFilters({...tempFilters, allocation: e.target.value})} list="allocation-suggestions" /></div>
               <div className="input-group"><label>Status</label><select className="dropdown-select" value={tempFilters.status} onChange={e => setTempFilters({...tempFilters, status: e.target.value})}><option value="">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-              <button className="primary-btn margin-top-lg" onClick={() => { setSearchFilters(tempFilters); setIsSearchModalOpen(false); }}>Search</button>
+              <button className="primary-btn margin-top-lg" onClick={() => { 
+                const cleanedFilters = Object.fromEntries(Object.entries(tempFilters).filter(([_, v]) => v !== ''));
+                setSearchFilters(cleanedFilters); 
+                setIsSearchModalOpen(false); 
+              }}>Search</button>
             </div>
           </div>
         </div>

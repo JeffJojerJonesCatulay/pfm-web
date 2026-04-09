@@ -412,14 +412,6 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                   <label>Value Added</label>
                   <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
                 </div>
-                <div className="detail-group">
-                  <label>Added By</label>
-                  <p>@{selectedItem.addedBy}</p>
-                </div>
-                <div className="detail-group">
-                  <label>Record ID</label>
-                  <p>#{selectedItem.id}</p>
-                </div>
               </div>
 
               {selectedAllocDetail && (

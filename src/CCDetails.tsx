@@ -372,8 +372,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
               <div className="detail-grid">
                 <div className="detail-group"><label>Last Digits</label><p>{selectedItem.ccLastDigit}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
-                <div className="detail-group"><label>Added By</label><p>@{selectedItem.addedBy}</p></div>
-                <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'} {selectedItem.updateBy ? `(@${selectedItem.updateBy})` : ''}</p></div>
+                <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>

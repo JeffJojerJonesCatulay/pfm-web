@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import avatarUrl from './assets/avatar.png';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import './css/App.css';
-import { PFM_VERSION } from './config';
+import { PFM_VERSION, PFM_UPDATE_DATE } from './config';
 
 // Custom Minimal SVG Icons
 const PieChartIcon = () => (
@@ -211,6 +211,9 @@ export default function Dashboard({
               </p>
               <p style={{ color: '#9ca3af', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginTop: '8px', letterSpacing: '0.5px' }}>
                 RELEASED: APRIL 09, 2026
+              </p>
+              <p style={{ color: '#9ca3af', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.5px' }}>
+                LAST UPDATED ON: APRIL 09, 2026
               </p>
             </div>
             <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6' }}>

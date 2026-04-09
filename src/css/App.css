@@ -449,10 +449,23 @@
   font-family: inherit;
 }
 
-.input-group input:focus, .dropdown-select:focus {
+.input-group input:focus, .dropdown-select:focus, .form-textarea:focus {
   outline: none;
   border-color: var(--primary-green);
   box-shadow: 0 0 0 4px rgba(66, 194, 101, 0.15);
+}
+
+.form-textarea {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  background: white;
 }
 
 .dropdown-select {

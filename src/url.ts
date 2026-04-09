@@ -64,6 +64,7 @@ export const API_URLS = {
   },
   SALARY_EXPENSE: {
     BASE_GLOBAL: `${BASE}get/salaryexpensetracker`,
+    SEARCH: `${BASE}search/salaryexpensetracker`,
     BASE_BY_SALARY: (salaryId: number) => `${BASE}search/salaryexpensetracker/salaryId/${salaryId}`,
     GET_BY_ID: (id: number) => `${BASE}get/salaryexpensetracker/id/${id}`,
     CREATE: `${BASE}salaryexpensetracker/create/`,
