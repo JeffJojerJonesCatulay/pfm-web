@@ -153,10 +153,6 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     return yearFilter === 'All' || item.year.toString() === yearFilter;
   });
 
-  const chartColors = [
-    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
-    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
-  ];
 
   const chartData = useMemo(() => {
     return [...filteredItems].sort((a, b) => a.year - b.year)
