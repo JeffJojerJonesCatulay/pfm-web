@@ -1,0 +1,722 @@
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell,
+  LabelList
+} from 'recharts';
+import deskIllustrationUrl from './assets/desk_illustration.png';
+import { API_URLS } from './url';
+import { ensureFreshToken } from './utils/securityUtils';
+import './css/App.css';
+
+interface InvestmentItem {
+  id?: number;
+  allocId: number;
+  date: string;
+  valueAdded: number;
+  marketValue: number;
+  addedBy?: string;
+}
+
+interface InvestmentProps {
+  onBack: () => void;
+  onNavigateToMonthlyGrowth: () => void;
+  onNavigateToYearlyGrowth: () => void;
+}
+
+const BackIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+
+const PenIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9"></path>
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
+
+export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNavigateToYearlyGrowth }: InvestmentProps) {
+  const [items, setItems] = useState<InvestmentItem[]>([]);
+  const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
+  const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(true);
+  const [totalElements, setTotalElements] = useState(0);
+  const [allocationOptions, setAllocationOptions] = useState<any[]>([]);
+  const [allocationMap, setAllocationMap] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(false);
+
+  const [selectedItem, setSelectedItem] = useState<InvestmentItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAllocDetail, setSelectedAllocDetail] = useState<any>(null);
+  const [isFetchingAlloc, setIsFetchingAlloc] = useState(false);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ 
+    allocId: 0, 
+    date: new Date().toISOString().split('T')[0], 
+    valueAdded: 0, 
+    marketValue: 0 
+  });
+  const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editItem, setEditItem] = useState<InvestmentItem | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{type: 'delete' | 'update', message: string} | null>(null);
+  const [resultDialog, setResultDialog] = useState<{status: 'success' | 'failed', message: string} | null>(null);
+
+  useEffect(() => {
+    fetchData(0, selectedAllocId);
+  }, [selectedAllocId]);
+
+  useEffect(() => {
+    fetchAllocationOptions();
+  }, []);
+
+  const fetchAllocationOptions = async () => {
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URLS.ALLOCATIONS.BASE}?page=0&size=100&sortBy=allocId`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.data?.content || json.content || [];
+        setAllocationOptions(content.filter((a: any) => a.status === 'Active'));
+        const map: Record<number, string> = {};
+        content.forEach((a: any) => { map[a.allocId] = a.allocation; });
+        setAllocationMap(map);
+      }
+    } catch (e) { console.error('Error fetching allocations:', e); }
+  };
+
+  const fetchData = async (pageNumber = 0, allocId = selectedAllocId) => {
+    setLoading(true);
+    if (pageNumber === 0) {
+      setItems([]);
+      setTotalElements(0);
+      setTotalPages(1);
+    }
+    const token = await ensureFreshToken();
+    if (!token) { setLoading(false); return; }
+
+    try {
+      const baseUrl = allocId 
+        ? API_URLS.INVESTMENT.SEARCH_BY_ALLOC(allocId)
+        : API_URLS.INVESTMENT.BASE;
+
+      const res = await fetch(`${baseUrl}?page=${pageNumber}&size=20&sortBy=id`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const payload = json.data || json;
+        const content = payload.content || [];
+        setItems(content);
+        setTotalElements(payload.totalElements || 0);
+        setTotalPages(payload.totalPages || 1);
+        setIsLastPage(payload.last !== undefined ? payload.last : true);
+        setPage(pageNumber);
+      }
+    } catch (e) {
+      console.error('Error fetching investments:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllocDetail = async (allocId: number) => {
+    setSelectedAllocDetail(null);
+    setIsFetchingAlloc(true);
+    const token = await ensureFreshToken();
+    if (!token) { setIsFetchingAlloc(false); return; }
+    try {
+      const res = await fetch(API_URLS.ALLOCATIONS.GET_BY_ID(allocId), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const detail = json.data || json;
+        setSelectedAllocDetail(Array.isArray(detail) ? detail[0] : detail);
+      }
+    } catch (e) { console.error('Error fetching allocation detail:', e); } finally { setIsFetchingAlloc(false); }
+  };
+
+  const handleCreate = async () => {
+    if (newItem.allocId === 0 || !newItem.date) {
+      setResultDialog({ status: 'failed', message: 'Please select an Account and provide a Period Date.' });
+      return;
+    }
+    setIsCreating(true);
+    const token = await ensureFreshToken();
+    if (!token) { setIsCreating(false); return; }
+
+    try {
+      const res = await fetch(API_URLS.INVESTMENT.CREATE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ...newItem, addedBy: localStorage.getItem('pfm_username') || 'jeff' })
+      });
+      if (res.ok) {
+        setIsCreateModalOpen(false);
+        setResultDialog({ status: 'success', message: 'Portfolio entry recorded successfully!' });
+        fetchData(0);
+      } else {
+        setResultDialog({ status: 'failed', message: 'Failed to record entry. Please try again.' });
+      }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'An error occurred.' }); } finally { setIsCreating(false); }
+  };
+
+  const executeDelete = async () => {
+    setConfirmDialog(null);
+    if (!selectedItem?.id) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+    try {
+      const res = await fetch(API_URLS.INVESTMENT.DELETE(selectedItem.id), {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Portfolio entry deleted.' });
+        setIsModalOpen(false);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Failed to delete.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
+  };
+
+  const executeUpdate = async () => {
+    setConfirmDialog(null);
+    if (!editItem?.id) return;
+    const token = await ensureFreshToken();
+    if (!token) return;
+
+    try {
+      const body = { 
+        ...editItem, 
+        updateBy: localStorage.getItem('pfm_username') || 'jeff',
+        updateDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const res = await fetch(API_URLS.INVESTMENT.UPDATE(editItem.id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        setResultDialog({ status: 'success', message: 'Portfolio updated!' });
+        setIsEditing(false);
+        setSelectedItem(editItem);
+        fetchData(page);
+      } else { setResultDialog({ status: 'failed', message: 'Update failed.' }); }
+    } catch (e) { setResultDialog({ status: 'failed', message: 'Error processing update.' }); }
+  };
+
+  const promptDelete = () => {
+    setConfirmDialog({ type: 'delete', message: 'This entry will be permanently removed. Continue?' });
+  };
+
+
+  const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
+
+  const chartData = useMemo(() => {
+    return [...items].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map(it => ({
+      name: it.date,
+      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      valuation: it.marketValue,
+      contribution: it.valueAdded,
+      allocId: it.allocId,
+      id: it.id
+    }));
+  }, [items, allocationMap]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900, fontSize: '12px' }}>{data.allocation}</p>
+          <p className="tooltip-label" style={{ fontSize: '10px', color: '#6b7280' }}>Recorded: {data.name}</p>
+          <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
+            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{data.valuation.toLocaleString()}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{data.contribution.toLocaleString()}</p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="app-container allocations-page">
+      <section className="header-section allocations-header">
+        <div className="header-pattern"></div>
+        <div className="header-pattern-mask"></div>
+        <div className="header-inner allocations-header-inner">
+          <div className="header-left">
+            <button className="icon-btn" onClick={onBack} aria-label="Back"><BackIcon /></button>
+          </div>
+          
+          <div className="header-titles centered-titles">
+            <h1 className="allocations-title">Investments</h1>
+            <div className="status-pill-container">
+              <p className="allocations-subtitle status-pill">
+                {selectedAllocId ? (
+                  `${allocationMap[selectedAllocId] || '...'} • ${totalElements} RECORDS`
+                ) : `ALL PORTFOLIOS • ${totalElements} RECORDS`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="header-right">
+            <button 
+              className="premium-action-pill" 
+              onClick={() => setIsInitialModalOpen(true)}
+            >
+              <div className="pill-icon"><PenIcon /></div>
+              <span>{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <main className="allocations-main">
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
+        
+        {items.length > 0 && (
+          <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', minHeight: '400px', overflow: 'hidden', padding: '0' }}>
+            <div className="chart-header" style={{ padding: '24px 24px 0' }}>
+              <span className="chart-title">Portfolio Valuation Breakdown</span>
+              <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>PAST {items.length} ENTRIES</span>
+            </div>
+            <div className="chart-scroll-container" style={{ padding: '0 24px 24px' }}>
+              <div style={{ minWidth: items.length > 5 ? `${items.length * 80}px` : '400px', height: '320px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 50, bottom: 50, right: 30, left: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis 
+                      dataKey="id" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 9, fill: '#9ca3af', fontWeight: 600 }}
+                      dy={10}
+                      tickFormatter={(id) => {
+                        const item = chartData.find(d => d.id === id);
+                        if (!item) return '';
+                        const d = new Date(item.name);
+                        return isNaN(d.getTime()) ? item.name : `${d.getMonth()+1}/${d.getDate()}`;
+                      }}
+                    />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }} />
+                    <Bar 
+                      dataKey="valuation" 
+                      radius={[6, 6, 6, 6]}
+                      maxBarSize={60}
+                      animationDuration={1500}
+                      onClick={(state: any) => {
+                        if (state && state.id) {
+                          const originalItem = items.find(it => it.id === state.id);
+                          if (originalItem) {
+                            setSelectedItem(originalItem);
+                            setIsModalOpen(true);
+                            fetchAllocDetail(originalItem.allocId);
+                          }
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <LabelList 
+                        dataKey="allocation" 
+                        position="top" 
+                        offset={25}
+                        style={{ fontSize: '9px', fontWeight: '800', fill: '#111827', textTransform: 'uppercase' }}
+                      />
+                      <LabelList 
+                        dataKey="valuation" 
+                        position="top" 
+                        offset={10}
+                        formatter={(val: any) => `₱${Number(val).toLocaleString()}`}
+                        style={{ fontSize: '9px', fontWeight: 'bold', fill: '#6b7280' }}
+                      />
+                      {chartData.map((_entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={index % 2 === 0 ? '#10b981' : '#34d399'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+        {loading && items.length === 0 ? (
+          <p style={{ textAlign: 'center', margin: '40px', color: '#6b7280' }}>Fetching portfolio history...</p>
+        ) : items.length > 0 ? (
+          <div className="allocations-list" style={{ paddingBottom: '20px' }}>
+            {items.map((item, i) => (
+              <div 
+                key={item.id || i} 
+                className="allocation-card clickable-card entry-card slide-in-top" 
+                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => { 
+                  setSelectedItem(item); 
+                  setIsModalOpen(true); 
+                  fetchAllocDetail(item.allocId);
+                }}
+              >
+                <div className="card-main-content">
+                  <div className="alloc-avatar investment-avatar" style={{ backgroundColor: '#10b981' }}>
+                    {getInitial(allocationMap[item.allocId])}
+                  </div>
+                  <div className="alloc-info">
+                    <h3 className="alloc-name">{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
+                    <p className="alloc-meta">{item.date}</p>
+                  </div>
+                </div>
+                <div className="card-value-display">
+                  <div className="card-amount-wrapper">
+                    <span className="currency-symbol">₱</span>
+                    <span className="value-amount">{item.marketValue?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <div className="pagination-container">
+              <button className="pagination-btn" onClick={() => fetchData(page - 1)} disabled={page === 0 || loading}>Prev</button>
+              <div className="pagination-numbers">
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const showPage = totalPages <= 5 || (idx === 0 || idx === totalPages - 1 || Math.abs(page - idx) <= 1);
+                  if (!showPage && idx === 1) return <span key={idx}>...</span>;
+                  if (!showPage && idx === totalPages - 2) return <span key={idx}>...</span>;
+                  if (!showPage) return null;
+                  return (
+                    <button key={idx} className={`pagination-number ${page === idx ? 'active' : ''}`} onClick={() => fetchData(idx)} disabled={loading}>{idx + 1}</button>
+                  );
+                })}
+              </div>
+              <button className="pagination-btn" onClick={() => fetchData(page + 1)} disabled={isLastPage || loading}>Next</button>
+            </div>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="empty-state-container">
+            <div className="empty-state-icon-box">
+              <img src={deskIllustrationUrl} alt="Empty" className="empty-state-illustration" />
+            </div>
+            <h3 className="empty-state-title">No Entries Recorded</h3>
+            <p className="empty-state-text">Start tracking your portfolio by adding your first entry for any account.</p>
+          </div>
+        ) : null}
+        </div>
+      </main>
+
+      {/* CHOOSE ACCOUNT OVERLAY */}
+      {isInitialModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={() => setIsInitialModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h2 className="form-title" style={{ margin: 0 }}>Portfolio Filter</h2>
+                {selectedAllocId && (
+                  <button 
+                  onClick={() => { setSelectedAllocId(null); setIsInitialModalOpen(false); fetchData(0, null); }}
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Clear Filter
+                  </button>
+                )}
+            </div>
+            <p className="signup-prompt" style={{ marginBottom: '24px' }}>Select an account to view and record portfolio entries or view everything.</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
+                <button 
+                  className={`allocation-card clickable-card ${selectedAllocId === null ? 'active-selection' : ''}`}
+                  style={{ width: '100%', border: selectedAllocId === null ? '2px solid #10b981' : '1px solid #e5e7eb', padding: '16px', display: 'flex', alignItems: 'center' }}
+                  onClick={() => {
+                    setSelectedAllocId(null);
+                    setIsInitialModalOpen(false);
+                    fetchData(0, null);
+                  }}
+                >
+                  <div className="alloc-avatar" style={{ backgroundColor: '#6b7280' }}>★</div>
+                  <div className="alloc-info" style={{ textAlign: 'left' }}>
+                    <h3 className="alloc-name">Global View</h3>
+                    <p className="alloc-meta">All Investment Accounts</p>
+                  </div>
+                </button>
+
+              {allocationOptions.map(opt => (
+                <button 
+                  key={opt.allocId} 
+                  className={`allocation-card clickable-card ${selectedAllocId === opt.allocId ? 'active-selection' : ''}`}
+                  style={{ width: '100%', border: selectedAllocId === opt.allocId ? '2px solid #10b981' : '1px solid #e5e7eb', padding: '16px', display: 'flex', alignItems: 'center' }}
+                  onClick={() => {
+                    setSelectedAllocId(opt.allocId);
+                    setIsInitialModalOpen(false);
+                    fetchData(0, opt.allocId);
+                    setNewItem(prev => ({ ...prev, allocId: opt.allocId }));
+                  }}
+                >
+                  <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>{getInitial(opt.allocation)}</div>
+                  <div className="alloc-info" style={{ textAlign: 'left' }}>
+                    <h3 className="alloc-name">{opt.allocation}</h3>
+                    <p className="alloc-meta">{opt.type}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
+              <button className="primary-btn" style={{ width: '100%', background: '#3b82f6' }} onClick={onNavigateToMonthlyGrowth}>Monthly Growth Analytics</button>
+              <button className="primary-btn" style={{ width: '100%', background: '#10b981' }} onClick={onNavigateToYearlyGrowth}>Yearly Growth Analytics</button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsInitialModalOpen(false)}>Close</button>
+                <button className="secondary-btn" style={{ flex: 1, color: '#6b7280', border: '1px solid #e5e7eb' }} onClick={onBack}>Return to Dashboard</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PlusIcon /></button>
+
+      {/* CREATE MODAL */}
+      {isCreateModalOpen && (
+        <div className="modal-overlay" onClick={() => !isCreating && setIsCreateModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px', width: '95%' }}>
+            <h2 className="form-title">Record Portfolio Entry</h2>
+            <form className="login-form">
+              <div className="input-group">
+                <label>Account / Asset</label>
+                <select 
+                  className="dropdown-select" 
+                  value={newItem.allocId} 
+                  onChange={e => setNewItem({...newItem, allocId: Number(e.target.value)})}
+                >
+                  <option value="0">Select Account...</option>
+                  {allocationOptions.map(opt => (
+                    <option key={opt.allocId} value={opt.allocId}>{opt.allocation}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-group">
+                <label>Period Date</label>
+                <input type="date" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px', width: '100%' }}>
+                <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                  <label>Value Added (₱)</label>
+                  <input 
+                    type="number" 
+                    value={newItem.valueAdded} 
+                    onChange={e => setNewItem({...newItem, valueAdded: Number(e.target.value)})} 
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                  <label>Market Value (₱)</label>
+                  <input 
+                    type="number" 
+                    value={newItem.marketValue} 
+                    onChange={e => setNewItem({...newItem, marketValue: Number(e.target.value)})} 
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate} disabled={isCreating} style={{ width: '100%', marginTop: '24px' }}>
+                {isCreating ? 'Synching Portfolio...' : 'Save Entry'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DETAIL MODAL */}
+      {isModalOpen && selectedItem && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content alloc-detail-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="alloc-detail-content">
+              {isEditing ? (
+                <div className="login-form">
+                  <h2 className="form-title">Edit Entry</h2>
+                  
+                  <div className="input-group">
+                    <label>Account / Asset</label>
+                    <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '13px', fontWeight: 600 }}>
+                      {allocationMap[editItem?.allocId || 0] || 'Fund'}
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label>Period Date</label>
+                    <input 
+                      type="date" 
+                      value={editItem?.date || ''} 
+                      onChange={e => setEditItem(prev => prev ? ({ ...prev, date: e.target.value }) : null)} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%', marginBottom: '8px' }}>
+                    <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                      <label>Value Added (₱)</label>
+                      <input 
+                        type="number" 
+                        value={editItem?.valueAdded || 0} 
+                        onChange={e => setEditItem(prev => prev ? ({ ...prev, valueAdded: Number(e.target.value) }) : null)} 
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0, width: '100%' }}>
+                      <label>Market Value (₱)</label>
+                      <input 
+                        type="number" 
+                        value={editItem?.marketValue || 0} 
+                        onChange={e => setEditItem(prev => prev ? ({ ...prev, marketValue: Number(e.target.value) }) : null)} 
+                        style={{ width: '100%', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                    <button className="primary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog({ type: 'update', message: 'Save changes to this entry?' })}>Update</button>
+                    <button className="secondary-btn" style={{ flex: 1, color: '#6b7280', border: '1px solid #e5e7eb' }} onClick={() => setIsEditing(false)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="alloc-detail-header" style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: '-10px', right: '-10px', display: 'flex', gap: '8px' }}>
+                      <button className="icon-btn sm" onClick={() => { setEditItem(selectedItem); setIsEditing(true); }} style={{ padding: '8px', background: '#f3f4f6', color: '#6366f1' }}>
+                        <PenIcon />
+                      </button>
+                      <button className="icon-btn sm" onClick={promptDelete} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444' }}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+
+                    <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
+                      {getInitial(allocationMap[selectedItem.allocId])}
+                    </div>
+                    <h2>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</h2>
+                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Recorded on {selectedItem.date}</p>
+                  </div>
+
+                  <div className="detail-grid">
+                    <div className="detail-group">
+                      <label>Market Valuation</label>
+                      <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
+                        ₱ {selectedItem.marketValue?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="detail-group">
+                      <label>Value Added</label>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {selectedAllocDetail && (
+                    <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 12px', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>Allocation Details</h4>
+                      <div className="detail-grid" style={{ gridTemplateColumns: '1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div className="detail-group">
+                            <label style={{ fontSize: '10px' }}>Name</label>
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.allocation}</p>
+                          </div>
+                          <div className="detail-group">
+                            <label style={{ fontSize: '10px' }}>Type</label>
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.type}</p>
+                          </div>
+                        </div>
+                        <div className="detail-group">
+                          <label style={{ fontSize: '10px' }}>Description</label>
+                          <p style={{ fontSize: '13px', margin: 0, fontWeight: '500', color: '#4b5563' }}>{selectedAllocDetail.description || 'No description provided.'}</p>
+                        </div>
+                        <div className="detail-group">
+                          <label style={{ fontSize: '10px' }}>Status</label>
+                          <p style={{ fontSize: '13px', margin: 0, fontWeight: '600', color: selectedAllocDetail.status === 'Active' ? '#10b981' : '#ef4444' }}>{selectedAllocDetail.status}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isFetchingAlloc && <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>Loading account info...</p>}
+
+                  <button className="secondary-btn margin-top-lg" style={{ width: '100%' }} onClick={() => { setIsModalOpen(false); setSelectedAllocDetail(null); }}>Close</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION DIALOG */}
+      {confirmDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '380px', textAlign: 'center' }}>
+            <div className="warning-icon" style={{ 
+              backgroundColor: confirmDialog.type === 'delete' ? '#fee2e2' : '#e0e7ff', 
+              color: confirmDialog.type === 'delete' ? '#ef4444' : '#6366f1',
+              width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+            }}>
+              {confirmDialog.type === 'delete' ? <TrashIcon /> : <PenIcon />}
+            </div>
+            <h2 className="form-title">Confirm Action</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="primary-btn" 
+                style={{ flex: 1, background: confirmDialog.type === 'delete' ? '#ef4444' : '#6366f1' }}
+                onClick={confirmDialog.type === 'delete' ? executeDelete : executeUpdate}
+              >
+                Confirm
+              </button>
+              <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setConfirmDialog(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESULT DIALOG */}
+      {resultDialog && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content" style={{ textAlign: 'center', maxWidth: '380px' }}>
+            <div className="success-icon" style={{ backgroundColor: resultDialog.status === 'success' ? '#2ecc71' : '#ef4444', margin: '0 auto 20px' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <h2 className="form-title">Portfolio Updated</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>{resultDialog.message}</p>
+            <button className="primary-btn" style={{ width: '100%' }} onClick={() => setResultDialog(null)}>Great</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
