@@ -114,6 +114,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     }
     const token = await ensureFreshToken();
     if (!token) {
+      setResultDialog({ status: 'failed', message: 'Your session has expired. Please login again to continue.' });
       setLoading(false);
       return;
     }
@@ -139,6 +140,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       }
     } catch (e) {
       console.error('Error fetching expenses:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching expenses. Please try again later.' });
     } finally {
       setLoading(false);
     }
@@ -180,6 +182,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       }
     } catch (e) {
       console.error('Error fetching summary:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while calculating the cycle summary.' });
     }
   };
 

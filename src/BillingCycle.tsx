@@ -134,6 +134,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
     setIsCreating(true);
     const token = await ensureFreshToken();
     if (!token) {
+      setResultDialog({ status: 'failed', message: 'Your session has expired. Please login again to continue.' });
       setIsCreating(false);
       return;
     }
@@ -285,6 +286,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
       }
     } catch (e) {
       console.error('Error fetching billing cycles:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching the billing cycle records.' });
     } finally {
       setLoading(false);
     }

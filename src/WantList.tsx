@@ -115,7 +115,8 @@ export default function WantList({ onBack }: WantListProps) {
         setPage(pageNumber);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching want list:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching your items. Please try again later.' });
     } finally {
       setLoading(false);
     }

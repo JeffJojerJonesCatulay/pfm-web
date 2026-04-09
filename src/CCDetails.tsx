@@ -120,6 +120,7 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
       }
     } catch (e) {
       console.error('Error fetching CC details:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching the credit card data.' });
     } finally {
       setLoading(false);
     }

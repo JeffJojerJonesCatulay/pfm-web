@@ -101,6 +101,8 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   useEffect(() => {
     fetchCCOptions();
   }, []);
+
+  const fetchData = async (pageNumber: number, append: boolean) => {
     setLoading(true);
     if (!append) setItems([]);
 
@@ -135,6 +137,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
       }
     } catch (e) {
       console.error('Error fetching connected apps:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching the data. Please try again later.' });
     } finally {
       setLoading(false);
     }

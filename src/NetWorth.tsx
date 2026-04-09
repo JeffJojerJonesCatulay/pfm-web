@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_URLS } from './url';
-import { ensureFreshToken, containsProhibitedChars } from './utils/securityUtils';
+import { ensureFreshToken } from './utils/securityUtils';
 import './css/App.css';
 
 interface NetWorthProps {

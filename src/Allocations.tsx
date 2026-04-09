@@ -105,12 +105,20 @@ export default function Allocations({ onBack }: AllocationsProps) {
         setTotalPages(payload.totalPages || 1);
         setPage(pageNumber);
       }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { 
+      console.error('Error fetching allocations:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching data. Please try again later.' });
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleCardClick = async (id?: number) => {
     const token = await ensureFreshToken();
-    if (!id || !token) return;
+    if (!id || !token) {
+      if (!token) setResultDialog({ status: 'failed', message: 'Your session has expired. Please login again.' });
+      return;
+    }
     setIsEditing(false);
     setIsModalOpen(true);
     setIsFetchingDetails(true);

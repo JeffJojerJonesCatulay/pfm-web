@@ -115,7 +115,10 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
   const fetchSalaryDetailsForSummary = async (id: number) => {
     const token = await ensureFreshToken();
-    if (!token) return;
+    if (!token) {
+      setResultDialog({ status: 'failed', message: 'Your session has expired. Please login again to continue.' });
+      return;
+    }
     try {
       const res = await fetch(API_URLS.SALARY_TRACKER.GET_BY_ID(id), {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -125,7 +128,10 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         const data = Array.isArray(json.data) ? json.data[0] : (json.data || json);
         setSalaryInfo(data);
       }
-    } catch (e) { console.error('Error fetching salary details for summary:', e); }
+    } catch (e) { 
+      console.error('Error fetching salary details for summary:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching salary details.' });
+    }
   };
 
   useEffect(() => {
@@ -136,7 +142,10 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
 
   const fetchAllSalaryPeriods = async () => {
     const token = await ensureFreshToken();
-    if (!token) return;
+    if (!token) {
+      setResultDialog({ status: 'failed', message: 'Your session has expired. Please login again to continue.' });
+      return;
+    }
     try {
       const res = await fetch(`${API_URLS.SALARY_TRACKER.SEARCH}?page=0&size=100&sortBy=salaryId`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -146,7 +155,10 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         const content = json.data?.content || json.content || [];
         setAllSalaries(content);
       }
-    } catch (e) { console.error('Error fetching all salary periods:', e); }
+    } catch (e) { 
+      console.error('Error fetching all salary periods:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching all salary periods.' });
+    }
   };
 
   const fetchActiveSalaryOptions = async () => {
@@ -215,6 +227,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       }
     } catch (e) {
       console.error('Error fetching tracker data:', e);
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching your tracker data.' });
     } finally {
       setLoading(false);
     }

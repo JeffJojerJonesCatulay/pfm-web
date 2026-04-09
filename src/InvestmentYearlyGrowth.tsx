@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_URLS } from './url';
 import deskIllustrationUrl from './assets/desk_illustration.png';
-import { ensureFreshToken, containsProhibitedChars } from './utils/securityUtils';
+import { ensureFreshToken } from './utils/securityUtils';
 import './css/App.css';
 
 interface YearlyGrowthRecord {
