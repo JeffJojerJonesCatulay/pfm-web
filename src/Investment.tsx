@@ -241,13 +241,6 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
     setConfirmDialog({ type: 'delete', message: 'This entry will be permanently removed. Continue?' });
   };
 
-  const closeDetailModal = () => {
-    setIsModalOpen(false);
-    setIsEditing(false);
-    setSelectedItem(null);
-    setEditItem(null);
-    setSelectedAllocDetail(null);
-  };
 
   const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
 
@@ -372,7 +365,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                         formatter={(val: any) => `₱${Number(val).toLocaleString()}`}
                         style={{ fontSize: '9px', fontWeight: 'bold', fill: '#6b7280' }}
                       />
-                      {chartData.map((entry, index) => (
+                      {chartData.map((_entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={index % 2 === 0 ? '#10b981' : '#34d399'} 

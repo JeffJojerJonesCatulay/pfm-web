@@ -8,7 +8,6 @@ import {
   Tooltip, 
   ResponsiveContainer,
   Cell,
-  Legend,
   LabelList
 } from 'recharts';
 import deskIllustrationUrl from './assets/desk_illustration.png';
@@ -167,10 +166,6 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
   });
 
 
-  const chartColors = [
-    '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
-    '#ec4899', '#06b6d4', '#84cc16', '#3b82f6', '#f97316'
-  ];
 
   const chartData = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
