@@ -1,6 +1,10 @@
 # Stage 1: Build the application
 FROM node:20-alpine AS build
 
+# Inject environment variables at build time
+ARG VITE_PFM_BASE_URL
+ENV VITE_PFM_BASE_URL=$VITE_PFM_BASE_URL
+
 WORKDIR /app
 
 # Copy package files and install dependencies
