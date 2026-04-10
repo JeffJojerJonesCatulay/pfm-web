@@ -108,21 +108,28 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
 
     try {
       const token = await ensureFreshToken();
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-      let url = `${API_URLS.CONNECTED_APPS.BASE}?page=${pageNumber}&size=20&sortBy=id`;
+      const hasSearchTerms = !!(searchTerms.connectedApp || searchTerms.subscription || searchTerms.autoDebit);
       
+      let baseUrl = API_URLS.CONNECTED_APPS.BASE;
       if (selectedCcId) {
-        url = `${API_URLS.CONNECTED_APPS.SEARCH_BY_CC(selectedCcId)}?page=${pageNumber}&size=10&sortBy=id`;
-      } else if (isSearching) {
-        url = `${API_URLS.CONNECTED_APPS.SEARCH_GLOBAL}?page=${pageNumber}&size=20&sortBy=id`;
+        baseUrl = API_URLS.CONNECTED_APPS.SEARCH_BY_CC(selectedCcId);
+      } else if (isSearching && hasSearchTerms) {
+        baseUrl = API_URLS.CONNECTED_APPS.SEARCH_GLOBAL;
       }
 
-      if (isSearching) {
-        if (searchTerms.connectedApp) url += `&connectedApp=${searchTerms.connectedApp.replace(/ /g, '+')}`;
-        if (searchTerms.subscription) url += `&subscription=${searchTerms.subscription.replace(/ /g, '+')}`;
-        if (searchTerms.autoDebit) url += `&autoDebit=${searchTerms.autoDebit.replace(/ /g, '+')}`;
+      let url = `${baseUrl}?page=${pageNumber}&size=20&sortBy=id`;
+      
+      if (hasSearchTerms && (isSearching || selectedCcId)) {
+        if (searchTerms.connectedApp) url += `&connectedApp=${encodeURIComponent(searchTerms.connectedApp.trim())}`;
+        if (searchTerms.subscription) url += `&subscription=${encodeURIComponent(searchTerms.subscription.trim())}`;
+        if (searchTerms.autoDebit) url += `&autoDebit=${encodeURIComponent(searchTerms.autoDebit.trim())}`;
       }
+
 
       const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -134,10 +141,15 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
         setTotalElements(payload.totalElements || 0);
         setTotalPages(payload.totalPages || 1);
         setPage(pageNumber);
+      } else if (res.status === 400 && selectedCcId) {
+        // Backend returns 400 for empty list on SEARCH_BY_CC
+        setItems([]);
+        setTotalElements(0);
+        setTotalPages(0);
       }
     } catch (e) {
       console.error('Error fetching connected apps:', e);
-      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching the data. Please try again later.' });
+      setResultDialog({ status: 'failed', message: 'Something went wrong while fetching the data.' });
     } finally {
       setLoading(false);
     }
@@ -157,21 +169,36 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   }, [searchTerms, isSearching, selectedCcId]);
 
   const handleSearch = () => {
+    const hasFilters = !!(tempSearchTerms.connectedApp || tempSearchTerms.subscription || tempSearchTerms.autoDebit);
     setSearchTerms(tempSearchTerms);
-    setIsSearching(true);
+    setIsSearching(hasFilters);
     setIsSearchModalOpen(false);
   };
 
   const clearSearch = () => {
-    setIsSearching(false);
     const empty = { connectedApp: '', subscription: '', autoDebit: '' };
     setSearchTerms(empty);
     setTempSearchTerms(empty);
+    setIsSearching(false);
+  };
+
+  const handleInputChange = (setter: any, field: string, value: string, currentObj?: any) => {
+    if (containsProhibitedChars(value)) return;
+    if (currentObj) {
+      setter({ ...currentObj, [field]: value });
+    } else {
+      setter(value);
+    }
   };
 
   const handleCreate = async () => {
-    if (!newItem.ccId || !newItem.connectedApp || !newItem.amount || !newItem.date) {
-      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Card, App Name, Amount, and Date.' });
+    const isAutoDebitEnabled = newItem.autoDebit === 'Enabled';
+    const isAmountMissing = newItem.amount === '' || newItem.amount === null || newItem.amount === undefined;
+    
+    if (!newItem.ccId || !newItem.connectedApp || (isAutoDebitEnabled && (isAmountMissing || !newItem.date || !newItem.subscription))) {
+      let missingFields = 'Card and App Name';
+      if (isAutoDebitEnabled) missingFields += ', Plan, Amount, and Date';
+      setResultDialog({ status: 'failed', message: `Please fill in all mandatory fields: ${missingFields}.` });
       return;
     }
 
@@ -183,14 +210,15 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     const token = await ensureFreshToken();
     if (!token) return;
 
+    const today = new Date().toISOString().split('T')[0];
     const payload = {
       ccId: Number(newItem.ccId),
       connectedApp: newItem.connectedApp,
-      subscription: newItem.subscription,
+      subscription: newItem.subscription || null,
       autoDebit: newItem.autoDebit,
-      amount: Number(newItem.amount),
-      date: newItem.date,
-      remarks: newItem.remarks,
+      amount: newItem.amount ? Number(newItem.amount) : (newItem.autoDebit === 'Disabled' ? 0 : null),
+      date: newItem.autoDebit === 'Disabled' ? (newItem.date || today) : (newItem.date || null),
+      remarks: newItem.remarks || null,
       addedBy: username
     };
 
@@ -214,8 +242,13 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
   const executeUpdate = async () => {
     setConfirmDialog(null);
     if (!editItem.id) return;
-    if (!editItem.ccId || !editItem.connectedApp || !editItem.amount || !editItem.date) {
-      setResultDialog({ status: 'failed', message: 'Please fill in all mandatory fields: Card, App Name, Amount, and Date.' });
+    const isAutoDebitEnabled = editItem.autoDebit === 'Enabled';
+    const isAmountMissing = editItem.amount === null || editItem.amount === undefined;
+
+    if (!editItem.ccId || !editItem.connectedApp || (isAutoDebitEnabled && (isAmountMissing || !editItem.date || !editItem.subscription))) {
+      let missingFields = 'Card and App Name';
+      if (isAutoDebitEnabled) missingFields += ', Plan, Amount, and Date';
+      setResultDialog({ status: 'failed', message: `Please fill in all mandatory fields: ${missingFields}.` });
       return;
     }
 
@@ -227,15 +260,16 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
     const token = await ensureFreshToken();
     if (!token) return;
 
+    const today = new Date().toISOString().split('T')[0];
     const payload = {
       id: editItem.id,
       ccId: Number(editItem.ccId),
       connectedApp: editItem.connectedApp || '',
-      subscription: editItem.subscription || '',
+      subscription: editItem.subscription || null,
       autoDebit: editItem.autoDebit,
-      amount: Number(editItem.amount),
-      date: editItem.date,
-      remarks: editItem.remarks || '',
+      amount: editItem.amount ? Number(editItem.amount) : (editItem.autoDebit === 'Disabled' ? 0 : null),
+      date: editItem.autoDebit === 'Disabled' ? (editItem.date || today) : (editItem.date || null),
+      remarks: editItem.remarks || null,
       updateBy: username
     };
 
@@ -365,7 +399,10 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                   {getInitial(it.connectedApp)}
                 </div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">{it.connectedApp} ({it.subscription})</h3>
+                  <h3 className="alloc-name">
+                    {it.connectedApp}
+                    {it.subscription ? ` (${it.subscription})` : ''}
+                  </h3>
                   <p className="alloc-meta">
                     {it.autoDebit} &bull; {ccOptions.find(c => c.ccId === it.ccId)?.ccAcronym || 'Credit Card'}
                   </p>
@@ -439,7 +476,9 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                 </div>
                 <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.amount || 0).toLocaleString()}</p></div>
                 <div className="detail-group"><label>Auto Debit</label><p>{selectedItem.autoDebit}</p></div>
-                <div className="detail-group"><label>Next Billing</label><p>{selectedItem.date}</p></div>
+                {selectedItem.autoDebit === 'Enabled' && (
+                  <div className="detail-group"><label>Next Billing</label><p>{selectedItem.date || '—'}</p></div>
+                )}
                 <div className="detail-group"><label>Remarks</label><p>{selectedItem.remarks || 'No remarks'}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                 <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
@@ -476,11 +515,11 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
               <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label>App Name</label>
-                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} placeholder="e.g. Maya" value={newItem.connectedApp} onChange={e => setNewItem({...newItem, connectedApp: e.target.value})} />
+                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} placeholder="e.g. Maya" value={newItem.connectedApp} onChange={e => handleInputChange(setNewItem, 'connectedApp', e.target.value, newItem)} />
                 </div>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label>Plan</label>
-                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} placeholder="e.g. Premium" value={newItem.subscription} onChange={e => setNewItem({...newItem, subscription: e.target.value})} />
+                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} placeholder="e.g. Premium" value={newItem.subscription} onChange={e => handleInputChange(setNewItem, 'subscription', e.target.value, newItem)} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '4px' }}>
@@ -496,13 +535,15 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                   <input type="number" style={{ width: '100%', boxSizing: 'border-box' }} placeholder="0.00" value={newItem.amount} onChange={e => setNewItem({...newItem, amount: e.target.value})} />
                 </div>
               </div>
-              <div className="input-group">
-                <label>Billing Date</label>
-                <input type="date" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
-              </div>
+              {newItem.autoDebit === 'Enabled' && (
+                <div className="input-group">
+                  <label>Billing Date</label>
+                  <input type="date" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
+                </div>
+              )}
               <div className="input-group">
                 <label>Remarks</label>
-                <input type="text" placeholder="Optional notes..." value={newItem.remarks} onChange={e => setNewItem({...newItem, remarks: e.target.value})} />
+                <input type="text" placeholder="Optional notes..." value={newItem.remarks} onChange={e => handleInputChange(setNewItem, 'remarks', e.target.value, newItem)} />
               </div>
               <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate}>Connect App</button>
             </div>
@@ -546,11 +587,11 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
               <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label>App Name</label>
-                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} value={editItem.connectedApp} onChange={e => setEditItem({...editItem, connectedApp: e.target.value})} />
+                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} value={editItem.connectedApp} onChange={e => handleInputChange(setEditItem, 'connectedApp', e.target.value, editItem)} />
                 </div>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label>Plan</label>
-                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} value={editItem.subscription} onChange={e => setEditItem({...editItem, subscription: e.target.value})} />
+                  <input type="text" style={{ width: '100%', boxSizing: 'border-box' }} value={editItem.subscription} onChange={e => handleInputChange(setEditItem, 'subscription', e.target.value, editItem)} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '4px' }}>
@@ -566,13 +607,15 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                   <input type="number" style={{ width: '100%', boxSizing: 'border-box' }} value={editItem.amount} onChange={e => setEditItem({...editItem, amount: Number(e.target.value)})} />
                 </div>
               </div>
-              <div className="input-group">
-                <label>Billing Date</label>
-                <input type="date" value={editItem.date} onChange={e => setEditItem({...editItem, date: e.target.value})} />
-              </div>
+              {editItem.autoDebit === 'Enabled' && (
+                <div className="input-group">
+                  <label>Billing Date</label>
+                  <input type="date" value={editItem.date} onChange={e => setEditItem({...editItem, date: e.target.value})} />
+                </div>
+              )}
               <div className="input-group">
                 <label>Remarks</label>
-                <input type="text" value={editItem.remarks} onChange={e => setEditItem({...editItem, remarks: e.target.value})} />
+                <input type="text" value={editItem.remarks} onChange={e => handleInputChange(setEditItem, 'remarks', e.target.value, editItem)} />
               </div>
               <button type="button" className="primary-btn margin-top-lg" onClick={handleUpdate}>Update Details</button>
             </div>
@@ -586,11 +629,11 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
             <div className="login-form">
               <div className="input-group">
                 <label>App Name</label>
-                <input type="text" placeholder="e.g. Maya" value={tempSearchTerms.connectedApp} onChange={e => setTempSearchTerms({...tempSearchTerms, connectedApp: e.target.value})} />
+                <input type="text" placeholder="e.g. Maya" value={tempSearchTerms.connectedApp} onChange={e => handleInputChange(setTempSearchTerms, 'connectedApp', e.target.value, tempSearchTerms)} />
               </div>
               <div className="input-group">
                 <label>Subscription Plan</label>
-                <input type="text" placeholder="e.g. Premium" value={tempSearchTerms.subscription} onChange={e => setTempSearchTerms({...tempSearchTerms, subscription: e.target.value})} />
+                <input type="text" placeholder="e.g. Premium" value={tempSearchTerms.subscription} onChange={e => handleInputChange(setTempSearchTerms, 'subscription', e.target.value, tempSearchTerms)} />
               </div>
               <div className="input-group">
                 <label>Auto-Debit Status</label>

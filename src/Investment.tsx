@@ -264,8 +264,8 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
           <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900, fontSize: '12px' }}>{data.allocation}</p>
           <p className="tooltip-label" style={{ fontSize: '10px', color: '#6b7280' }}>Recorded: {data.name}</p>
           <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
-            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{data.valuation.toLocaleString()}</p>
-            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{data.contribution.toLocaleString()}</p>
+            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{Number(data.valuation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{Number(data.contribution).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         </div>
       );
@@ -362,7 +362,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                         dataKey="valuation" 
                         position="top" 
                         offset={10}
-                        formatter={(val: any) => `₱${Number(val).toLocaleString()}`}
+                        formatter={(val: any) => `₱${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         style={{ fontSize: '9px', fontWeight: 'bold', fill: '#6b7280' }}
                       />
                       {chartData.map((_entry, index) => (
@@ -405,7 +405,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol">₱</span>
-                    <span className="value-amount">{item.marketValue?.toLocaleString()}</span>
+                    <span className="value-amount">{Number(item.marketValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
@@ -535,6 +535,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                   <label>Value Added (₱)</label>
                   <input 
                     type="number" 
+                    step="0.01"
                     value={newItem.valueAdded} 
                     onChange={e => setNewItem({...newItem, valueAdded: Number(e.target.value)})} 
                     style={{ width: '100%', boxSizing: 'border-box' }}
@@ -544,6 +545,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                   <label>Market Value (₱)</label>
                   <input 
                     type="number" 
+                    step="0.01"
                     value={newItem.marketValue} 
                     onChange={e => setNewItem({...newItem, marketValue: Number(e.target.value)})} 
                     style={{ width: '100%', boxSizing: 'border-box' }}
@@ -588,6 +590,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                       <label>Value Added (₱)</label>
                       <input 
                         type="number" 
+                        step="0.01"
                         value={editItem?.valueAdded || 0} 
                         onChange={e => setEditItem(prev => prev ? ({ ...prev, valueAdded: Number(e.target.value) }) : null)} 
                         style={{ width: '100%', boxSizing: 'border-box' }}
@@ -597,6 +600,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                       <label>Market Value (₱)</label>
                       <input 
                         type="number" 
+                        step="0.01"
                         value={editItem?.marketValue || 0} 
                         onChange={e => setEditItem(prev => prev ? ({ ...prev, marketValue: Number(e.target.value) }) : null)} 
                         style={{ width: '100%', boxSizing: 'border-box' }}
@@ -632,12 +636,12 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                     <div className="detail-group">
                       <label>Market Valuation</label>
                       <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
-                        ₱ {selectedItem.marketValue?.toLocaleString()}
+                        ₱ {Number(selectedItem.marketValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>Value Added</label>
-                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {Number(selectedItem.valueAdded || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                   </div>
 

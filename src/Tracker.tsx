@@ -444,7 +444,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
           <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
           <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
-            ₱{data.value.toLocaleString()}
+            ₱{Number(data.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       );
@@ -555,12 +555,12 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
           <section className="summary-banner" style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f3f4f6' }}>
             <div className="summary-item">
               <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Salary Amount</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{(salaryInfo.salary || 0).toLocaleString()}</h3>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{Number(salaryInfo.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
             <div className="summary-item">
               <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{items.reduce((acc, it) => acc + (it.expenseValue || 0), 0).toLocaleString()}</h3>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
             <div className="summary-item" style={{ textAlign: 'right' }}>
@@ -571,7 +571,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 fontWeight: '700', 
                 color: (salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)) >= 0 ? '#10b981' : '#ef4444' 
               }}>
-                ₱{(salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)).toLocaleString()}
+                ₱{(Number(salaryInfo.salary) - items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
             </div>
           </section>
@@ -611,7 +611,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol">₱</span>
-                    <span className="value-amount">{(it.expenseValue || 0).toLocaleString()}</span>
+                    <span className="value-amount">{Number(it.expenseValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="card-date-label">{it.date}</div>
                 </div>
@@ -668,7 +668,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                </div>
               <div className="input-group">
                 <label>Value (₱)</label>
-                <input type="number" value={newItem.expenseValue} onChange={e => setNewItem({...newItem, expenseValue: e.target.value})} />
+                <input type="number" step="0.01" value={newItem.expenseValue} onChange={e => setNewItem({...newItem, expenseValue: e.target.value})} />
               </div>
               <div className="input-group">
                  <label>Salary Date</label>
@@ -714,7 +714,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                     </div>
                     <div className="input-group">
                       <label>Value (₱)</label>
-                      <input type="number" value={editItem.expenseValue || 0} onChange={e => setEditItem({...editItem, expenseValue: Number(e.target.value)})} />
+                      <input type="number" step="0.01" value={editItem.expenseValue || 0} onChange={e => setEditItem({...editItem, expenseValue: Number(e.target.value)})} />
                     </div>
                     <div className="input-group">
                       <label>Salary Record</label>
@@ -746,7 +746,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                       <span style={{ color: getColor(selectedItem.expenseType), fontWeight: '600' }}>{selectedItem.expenseType}</span>
                     </div>
                     <div className="detail-grid">
-                      <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.expenseValue || 0).toLocaleString()}</p></div>
+                      <div className="detail-group"><label>Amount</label><p>₱{Number(selectedItem.expenseValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div>
                       <div className="detail-group"><label>Expense Type</label><p>{selectedItem.expenseType}</p></div>
                       <div className="detail-group">
                         <label>Salary Record</label>
