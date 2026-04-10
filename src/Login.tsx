@@ -131,7 +131,7 @@ export default function Login({ onLogin }: LoginProps) {
                   required 
                   placeholder="Enter password" 
                   value={loginPassword}
-                  onChange={(e) => isValidInput(e.target.value) && setLoginPassword(e.target.value)}
+                  onChange={(e) => setLoginPassword(e.target.value)}
                 />
               </div>
               <button type="submit" className="primary-btn">Login</button>
@@ -167,7 +167,7 @@ export default function Login({ onLogin }: LoginProps) {
                   required 
                   placeholder="Choose a password" 
                   value={signupPassword}
-                  onChange={(e) => isValidInput(e.target.value) && setSignupPassword(e.target.value)}
+                  onChange={(e) => setSignupPassword(e.target.value)}
                 />
               </div>
               <button type="submit" className="primary-btn margin-top-lg">Create</button>
