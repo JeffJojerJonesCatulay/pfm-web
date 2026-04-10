@@ -445,7 +445,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMod
       const data = payload[0].payload;
       return (
         <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
-          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{maskText(data.name, isPrivacyMode)}</p>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{maskText(data.name || '', isPrivacyMode)}</p>
           <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
             ₱{isPrivacyMode ? '***' : Number(data.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
@@ -605,7 +605,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMod
                     {getInitial(it.expenseDescription)}
                   </div>
                   <div className="alloc-info">
-                    <h3 className="alloc-name">{maskText(it.expenseDescription, isPrivacyMode) || 'Unnamed'}</h3>
+                    <h3 className="alloc-name">{maskText(it.expenseDescription || '', isPrivacyMode) || 'Unnamed'}</h3>
                     <p className="alloc-meta">
                       {it.expenseType || 'Unknown'} • {it.status}
                     </p>
@@ -747,7 +747,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMod
                   <>
                     <div className="alloc-detail-header">
                       <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.expenseType) }}>{getInitial(selectedItem.expenseDescription)}</div>
-                      <h2>{maskText(selectedItem.expenseDescription, isPrivacyMode)}</h2>
+                      <h2>{maskText(selectedItem.expenseDescription || '', isPrivacyMode)}</h2>
                       <span style={{ color: getColor(selectedItem.expenseType), fontWeight: '600' }}>{selectedItem.expenseType}</span>
                     </div>
                     <div className="detail-grid">
