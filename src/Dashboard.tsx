@@ -3,6 +3,7 @@ import avatarUrl from './assets/avatar.png';
 import deskIllustrationUrl from './assets/desk_illustration.png';
 import './css/App.css';
 import { PFM_VERSION, PFM_RELEASE_DATE, PFM_UPDATE_DATE } from './config';
+import { maskText } from './utils/privacyUtils';
 
 // Custom Minimal SVG Icons
 const PieChartIcon = () => (
@@ -69,6 +70,20 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const LockIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+const UnlockIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+  </svg>
+);
+
 const transactions = [
   { name: 'Allocation', icon: <PieChartIcon /> },
   { name: 'Investment', icon: <LineChartIcon /> },
@@ -90,6 +105,8 @@ interface DashboardProps {
   onNavigateToConnectedApps?: () => void;
   onNavigateToInvestment?: () => void;
   onNavigateToNetWorth?: () => void;
+  isPrivacyMode: boolean;
+  setIsPrivacyMode: (val: boolean) => void;
 }
 
 export default function Dashboard({ 
@@ -101,10 +118,15 @@ export default function Dashboard({
   onNavigateToCCExpense,
   onNavigateToConnectedApps,
   onNavigateToInvestment,
-  onNavigateToNetWorth
+  onNavigateToNetWorth,
+  isPrivacyMode,
+  setIsPrivacyMode
 }: DashboardProps) {
   const [username, setUsername] = useState('User');
   const [showAbout, setShowAbout] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [privacyPasswordInput, setPrivacyPasswordInput] = useState('');
+  const [privacyError, setPrivacyError] = useState('');
 
   useEffect(() => {
     const storedUsername = localStorage.getItem('pfm_username');
@@ -112,10 +134,24 @@ export default function Dashboard({
       setUsername(storedUsername);
     }
   }, []);
+
+  const handlePrivacyToggle = () => {
+    const stored = localStorage.getItem('pfm_password');
+    if (privacyPasswordInput === stored) {
+      setIsPrivacyMode(!isPrivacyMode);
+      setIsPrivacyModalOpen(false);
+      setPrivacyPasswordInput('');
+      setPrivacyError('');
+    } else {
+      setPrivacyError('Invalid password. Access denied.');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' }).toUpperCase();
   };
+
   return (
     <div className="app-container">
       {/* Header section with gradient and user info */}
@@ -139,22 +175,44 @@ export default function Dashboard({
                 />
               </div>
               <div className="user-info">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                  <h2 className="user-name" style={{ margin: 0 }}>@{username}</h2>
-                   <button 
-                    onClick={() => {
-                      localStorage.removeItem('pfm_username');
-                      localStorage.removeItem('pfm_password');
-                      localStorage.removeItem('pfm_token');
-                      localStorage.removeItem('pfm_token_time');
-                      onLogout();
-                    }}
-                    className="secondary-btn logout-btn-mobile"
-                    style={{ padding: '10px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', width: 'auto', background: 'rgba(255, 255, 255, 0.15)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px' }}
-                  >
-                    <LogoutIcon />
-                    Logout
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+                  <h2 className="user-name" style={{ margin: 0 }}>@{maskText(username, isPrivacyMode)}</h2>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setIsPrivacyModalOpen(true)}
+                      className="secondary-btn"
+                      style={{ 
+                        padding: '10px 16px', 
+                        fontSize: '0.9rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        width: 'auto', 
+                        background: isPrivacyMode ? '#ef4444' : 'rgba(255, 255, 255, 0.15)', 
+                        color: 'white', 
+                        border: '1px solid rgba(255, 255, 255, 0.3)', 
+                        borderRadius: '12px' 
+                      }}
+                    >
+                      {isPrivacyMode ? <LockIcon /> : <UnlockIcon />}
+                      {isPrivacyMode ? 'Private Mode: ON' : 'Private Mode: OFF'}
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        localStorage.removeItem('pfm_username');
+                        localStorage.removeItem('pfm_password');
+                        localStorage.removeItem('pfm_token');
+                        localStorage.removeItem('pfm_token_time');
+                        onLogout();
+                      }}
+                      className="secondary-btn logout-btn-mobile"
+                      style={{ padding: '10px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', width: 'auto', background: 'rgba(255, 255, 255, 0.15)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)', borderRadius: '12px' }}
+                    >
+                      <LogoutIcon />
+                      Logout
+                    </button>
+                  </div>
                 </div>
                 <p className="instruction-text" style={{ marginTop: '8px' }}>Please select your transaction</p>
               </div>
@@ -228,8 +286,38 @@ export default function Dashboard({
           </div>
         </div>
       )}
+
+      {isPrivacyModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsPrivacyModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '380px', borderRadius: '24px' }}>
+            <div className="success-icon" style={{ backgroundColor: '#6366f1', margin: '0 auto 24px' }}>
+              <LockIcon />
+            </div>
+            <h2 className="form-title" style={{ marginBottom: '8px' }}>Unlock Privacy Mode</h2>
+            <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>Please enter your password to change privacy status.</p>
+            
+            <div className="login-form">
+              <div className="input-group">
+                <label>Administrator Password</label>
+                <input 
+                  type="password" 
+                  placeholder="Enter password..." 
+                  value={privacyPasswordInput}
+                  onChange={e => {
+                    setPrivacyPasswordInput(e.target.value);
+                    setPrivacyError('');
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && handlePrivacyToggle()}
+                  autoFocus
+                />
+                {privacyError && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px', fontWeight: '600' }}>{privacyError}</p>}
+              </div>
+              <button className="primary-btn margin-top-lg" style={{ width: '100%' }} onClick={handlePrivacyToggle}>Verify & Proceed</button>
+              <button className="secondary-btn" style={{ width: '100%', marginTop: '12px' }} onClick={() => setIsPrivacyModalOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// exported inline

@@ -21,7 +21,6 @@ interface CCExpenseItem {
   dateAdded?: string;
   updateDate?: string;
   updatedBy?: string;
-  remarks?: string;
 }
 
 interface BillingCycleItem {
@@ -63,7 +62,10 @@ const PlusIcon = () => (
 interface CCExpenseProps {
   onBack: () => void;
   onNavigateToBillingCycle: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const WalletIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -81,7 +83,7 @@ const CloseIcon = () => (
 );
 
 
-export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpenseProps) {
+export default function CCExpense({ onBack, onNavigateToBillingCycle, isPrivacyMode }: CCExpenseProps) {
   const [items, setItems] = useState<CCExpenseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -96,8 +98,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
     ccRecId: 0,
     date: new Date().toISOString().split('T')[0],
     expenseDescription: '',
-    expenseValue: 0,
-    remarks: ''
+    expenseValue: 0
   });
 
   const [ccDetailsMap, setCcDetailsMap] = useState<Record<number, CCDetail>>({});
@@ -120,6 +121,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
   const [tempFilters, setTempFilters] = useState({ expenseDescription: '' });
 
   const [cycleSummary, setCycleSummary] = useState({ total: 0, payment: 0, remaining: 0 });
+  const [allCycleRecords, setAllCycleRecords] = useState<CCExpenseItem[]>([]);
 
   const fetchData = async (pageNumber = 0, ccRecId = selectedCycleId, filters = searchFilters) => {
     if (!ccRecId) return;
@@ -164,6 +166,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
 
   const fetchSummaryData = async (ccRecId: number) => {
     setCycleSummary({ total: 0, payment: 0, remaining: 0 });
+    setAllCycleRecords([]);
     const token = await ensureFreshToken();
     if (!token) return;
     try {
@@ -175,6 +178,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       if (res.ok) {
         const json = await res.json();
         const content = (json.data?.content || json.content || []) as CCExpenseItem[];
+        setAllCycleRecords(content);
         
         let total = 0;
         let payment = 0;
@@ -240,7 +244,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       return;
     }
 
-    if (containsProhibitedChars(editExpense.expenseDescription || '') || containsProhibitedChars(editExpense.remarks || '')) {
+    if (containsProhibitedChars(editExpense.expenseDescription || '')) {
       setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before updating.' });
       return;
     }
@@ -335,7 +339,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       return;
     }
 
-    if (containsProhibitedChars(newExpense.expenseDescription) || containsProhibitedChars(newExpense.remarks || '')) {
+    if (containsProhibitedChars(newExpense.expenseDescription)) {
       setResultDialog({ status: 'failed', message: 'Input contains prohibited characters. Please remove them before saving.' });
       return;
     }
@@ -359,8 +363,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
           ccRecId: selectedCycleId || 0,
           date: new Date().toISOString().split('T')[0],
           expenseDescription: '',
-          expenseValue: 0,
-          remarks: ''
+          expenseValue: 0
         });
         fetchData(0, selectedCycleId);
       } else { setResultDialog({ status: 'failed', message: 'Failed to record expense.' }); }
@@ -401,7 +404,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
   const pieData = useMemo(() => {
     // Group by description and summarize values
     const grouped: Record<string, { value: number, id?: number }> = {};
-    items.forEach(it => {
+    allCycleRecords.forEach(it => {
       const desc = it.expenseDescription || 'Other';
       if (desc === 'Payment') return; // EXCLUDE PAYMENT
       if (!grouped[desc]) grouped[desc] = { value: 0, id: it.ccExpId };
@@ -416,16 +419,16 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
       }))
       .filter(it => it.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [items]);
+  }, [allCycleRecords]);
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
-          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{maskText(data.name, isPrivacyMode)}</p>
           <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
-            ₱{data.value.toLocaleString()}
+            ₱{isPrivacyMode ? '***' : Number(data.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       );
@@ -526,7 +529,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         verticalAlign="bottom" 
                         align="center"
                         wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 600 }}
-                        formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
+                        formatter={(value) => <span style={{ color: '#4b5563' }}>{maskText(value, isPrivacyMode)}</span>}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -540,7 +543,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   <span className="summary-label">Total Expense</span>
                   <div className="summary-value" style={{ color: '#6366f1' }}>
                     <span style={{ fontSize: '14px' }}>₱</span>
-                    {cycleSummary.total.toLocaleString()}
+                    {isPrivacyMode ? '***' : Number(cycleSummary.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 
@@ -548,7 +551,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   <span className="summary-label">Payment</span>
                   <div className="summary-value" style={{ color: '#10b981' }}>
                     <span style={{ fontSize: '14px' }}>₱</span>
-                    {cycleSummary.payment.toLocaleString()}
+                    {isPrivacyMode ? '***' : Number(cycleSummary.payment).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 
@@ -556,7 +559,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   <span className="summary-label" style={{ color: '#f59e0b' }}>Remaining</span>
                   <div className="summary-value" style={{ color: '#f59e0b' }}>
                     <span style={{ fontSize: '14px' }}>₱</span>
-                    {cycleSummary.remaining.toLocaleString()}
+                    {isPrivacyMode ? '***' : Number(cycleSummary.remaining).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -593,7 +596,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                     {getInitial(it.expenseDescription)}
                   </div>
                   <div className="alloc-info">
-                    <h3 className="alloc-name">{it.expenseDescription}</h3>
+                    <h3 className="alloc-name">{maskText(it.expenseDescription, isPrivacyMode)}</h3>
                     <p className="alloc-meta">
                       {cycleMap[it.ccRecId] || `Cycle #${it.ccRecId}`}
                     </p>
@@ -602,7 +605,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                     <div className="card-amount-wrapper">
                       <span className="currency-symbol">₱</span>
                       <span className="value-amount" style={{ color: it.expenseDescription === 'Payment' ? '#10b981' : 'inherit' }}>
-                        {it.expenseValue?.toLocaleString()}
+                        {isPrivacyMode ? '***' : Number(it.expenseValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -641,16 +644,18 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
         </div>
       </main>
 
-      <button className="fab-btn" onClick={() => { 
-        if (!selectedCycleId) {
-          setIsInitialModalOpen(true);
-        } else {
-          setNewExpense(prev => ({ ...prev, ccRecId: selectedCycleId }));
-          setIsCreateModalOpen(true); 
-        }
-      }}>
-        <PlusIcon />
-      </button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => { 
+          if (!selectedCycleId) {
+            setIsInitialModalOpen(true);
+          } else {
+            setNewExpense(prev => ({ ...prev, ccRecId: selectedCycleId }));
+            setIsCreateModalOpen(true); 
+          }
+        }}>
+          <PlusIcon />
+        </button>
+      )}
 
       {/* Initial Cycle Selection Modal */}
       {isInitialModalOpen && (
@@ -781,17 +786,9 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                   onChange={e => setNewExpense({...newExpense, expenseValue: Number(e.target.value)})}
                 />
               </div>
-              <div className="input-group">
-                <label>Remarks</label>
-                <textarea 
-                  placeholder="Additional notes..." 
-                  value={newExpense.remarks} 
-                  onChange={e => setNewExpense({...newExpense, remarks: e.target.value})}
-                  style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
-                />
-              </div>
+            </div>
 
-              <button 
+            <button 
                 type="button" 
                 className="primary-btn margin-top-lg" 
                 onClick={handleCreate}
@@ -809,7 +806,6 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
               </button>
             </div>
           </div>
-        </div>
       )}
 
       {/* Suggestions Datalist */}
@@ -921,14 +917,6 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         ))}
                       </select>
                     </div>
-                    <div className="input-group">
-                      <label>Remarks</label>
-                      <textarea 
-                        value={editExpense?.remarks || ''} 
-                        onChange={e => setEditExpense(prev => prev ? ({ ...prev, remarks: e.target.value }) : null)}
-                        style={{ minHeight: '80px', borderRadius: '12px', padding: '12px' }}
-                      />
-                    </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                       <button className="primary-btn" style={{ flex: 1 }} onClick={promptUpdate}>Save</button>
@@ -942,7 +930,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
                         {getInitial(selectedExpense.expenseDescription)}
                       </div>
-                      <h2>{selectedExpense.expenseDescription}</h2>
+                      <h2>{maskText(selectedExpense.expenseDescription, isPrivacyMode)}</h2>
                       <p style={{ color: '#6b7280', fontSize: '14px' }}>Expense Details</p>
                     </div>
 
@@ -950,7 +938,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                       <div className="detail-group">
                         <label>Amount Paid</label>
                         <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
-                          ₱ {selectedExpense.expenseValue?.toLocaleString()}
+                          ₱ {maskAmount(selectedExpense.expenseValue || 0, isPrivacyMode)}
                         </p>
                       </div>
                       <div className="detail-group">
@@ -961,20 +949,14 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                         <label>Billing Period</label>
                         <p>{cycleMap[selectedExpense.ccRecId] || 'Unknown Cycle'}</p>
                       </div>
-                      {selectedExpense.remarks && (
-                        <div className="detail-group" style={{ gridColumn: '1 / -1' }}>
-                          <label>Remarks</label>
-                          <p style={{ fontStyle: 'italic', color: '#4b5563' }}>{selectedExpense.remarks}</p>
-                        </div>
-                      )}
                       
                       {/* Credit Card Details Info */}
                       {(allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)) && (
                         <div style={{ gridColumn: '1 / -1', marginTop: '12px', padding: '12px', background: '#f9fafb', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
                           <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>Card Details</p>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                            <span>{ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccName || 'Card Name'}</span>
-                            <span style={{ color: '#6366f1', fontWeight: 600 }}>**** {ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccLastDigit}</span>
+                            <span>{maskText(ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccName || 'Card Name', isPrivacyMode)}</span>
+                            <span style={{ color: '#6366f1', fontWeight: 600 }}>**** {isPrivacyMode ? '***' : ccDetailsMap[allActiveCycles.find(c => c.ccRecId === selectedExpense.ccRecId)!.ccId]?.ccLastDigit}</span>
                           </div>
                         </div>
                       )}
@@ -989,7 +971,9 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle }: CCExpens
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                      <button className="primary-btn" style={{ flex: 1 }} onClick={() => { setEditExpense(selectedExpense); setIsEditing(true); }}>Edit Record</button>
+                      {!isPrivacyMode && (
+                        <button className="primary-btn" style={{ flex: 1 }} onClick={() => { setEditExpense(selectedExpense); setIsEditing(true); }}>Edit Record</button>
+                      )}
                       <button className="secondary-btn" style={{ flex: 1 }} onClick={() => setIsDetailModalOpen(false)}>Close</button>
                     </div>
                   </>

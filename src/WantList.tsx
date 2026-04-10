@@ -20,7 +20,10 @@ interface WantListItem {
 
 interface WantListProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -43,7 +46,7 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function WantList({ onBack }: WantListProps) {
+export default function WantList({ onBack, isPrivacyMode }: WantListProps) {
   const [items, setItems] = useState<WantListItem[]>([]);
   const [page, setPage] = useState(0);
   const [isLastPage, setIsLastPage] = useState(true);
@@ -339,7 +342,7 @@ export default function WantList({ onBack }: WantListProps) {
               <div key={it.id || i} className="allocation-card clickable-card" onClick={() => handleCardClick(it.id)}>
                 <div className="alloc-avatar" style={{ backgroundColor: getColor(it.status) }}>{getInitial(it.item)}</div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">{it.item || 'Unnamed'}</h3>
+                  <h3 className="alloc-name">{maskText(it.item || '', isPrivacyMode) || 'Unnamed'}</h3>
                   <p className="alloc-meta">
                     {it.afford || 'Unknown'} &bull; 
                     <span style={{ color: getColor(it.status), marginLeft: '4px', fontWeight: '500' }}>{it.status || 'Planned'}</span>
@@ -376,7 +379,7 @@ export default function WantList({ onBack }: WantListProps) {
         )}
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>
+      {!isPrivacyMode && <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>}
 
       {/* CREATE MODAL */}
       {isCreateModalOpen && (
@@ -474,18 +477,18 @@ export default function WantList({ onBack }: WantListProps) {
                   <>
                     <div className="alloc-detail-header">
                       <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.status) }}>{getInitial(selectedItem.item)}</div>
-                      <h2>{selectedItem.item}</h2>
+                      <h2>{maskText(selectedItem.item || '', isPrivacyMode)}</h2>
                       <span style={{ color: getColor(selectedItem.status), fontWeight: '600' }}>{selectedItem.status}</span>
                     </div>
                     <div className="detail-grid">
-                      <div className="detail-group"><label>Estimated Price</label><p>₱{(selectedItem.estimatedPrice || 0).toLocaleString()}</p></div>
+                      <div className="detail-group"><label>Estimated Price</label><p>₱{isPrivacyMode ? '***' : (selectedItem.estimatedPrice || 0).toLocaleString()}</p></div>
                       <div className="detail-group"><label>Target Date</label><p>{selectedItem.dateWanted}</p></div>
                       <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                       <div className="detail-group"><label>Affordability</label><p>{selectedItem.afford}</p></div>
                       <div className="detail-group"><label>Remarks</label><p>{selectedItem.remarks || 'No remarks'}</p></div>
                       <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
-                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Item</button>
+                    {!isPrivacyMode && <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Item</button>}
                   </>
                 )}
               </div>

@@ -30,7 +30,10 @@ interface TrackerItem {
 interface AllocationsProps {
   onBack: () => void;
   onNavigateToSalaryRecord: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +64,7 @@ const WalletIcon = () => (
   </svg>
 );
 
-export default function Tracker({ onBack, onNavigateToSalaryRecord }: AllocationsProps) {
+export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMode }: AllocationsProps) {
   const [items, setItems] = useState<TrackerItem[]>([]);
   const [page, setPage] = useState(0);
   const [isLastPage, setIsLastPage] = useState(true);
@@ -442,9 +445,9 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
       const data = payload[0].payload;
       return (
         <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
-          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
+          <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{maskText(data.name, isPrivacyMode)}</p>
           <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
-            ₱{data.value.toLocaleString()}
+            ₱{isPrivacyMode ? '***' : Number(data.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       );
@@ -544,7 +547,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                     verticalAlign="bottom" 
                     align="center"
                     wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 600 }}
-                    formatter={(value) => <span style={{ color: '#4b5563' }}>{value}</span>}
+                    formatter={(value) => <span style={{ color: '#4b5563' }}>{maskText(value, isPrivacyMode)}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -555,12 +558,12 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
           <section className="summary-banner" style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f3f4f6' }}>
             <div className="summary-item">
               <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Salary Amount</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{(salaryInfo.salary || 0).toLocaleString()}</h3>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{isPrivacyMode ? '***' : Number(salaryInfo.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
             <div className="summary-item">
               <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{items.reduce((acc, it) => acc + (it.expenseValue || 0), 0).toLocaleString()}</h3>
+              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{isPrivacyMode ? '***' : items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
             <div className="summary-item" style={{ textAlign: 'right' }}>
@@ -571,7 +574,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 fontWeight: '700', 
                 color: (salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)) >= 0 ? '#10b981' : '#ef4444' 
               }}>
-                ₱{(salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)).toLocaleString()}
+                ₱{isPrivacyMode ? '***' : (Number(salaryInfo.salary) - items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
             </div>
           </section>
@@ -602,7 +605,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                     {getInitial(it.expenseDescription)}
                   </div>
                   <div className="alloc-info">
-                    <h3 className="alloc-name">{it.expenseDescription || 'Unnamed'}</h3>
+                    <h3 className="alloc-name">{maskText(it.expenseDescription, isPrivacyMode) || 'Unnamed'}</h3>
                     <p className="alloc-meta">
                       {it.expenseType || 'Unknown'} • {it.status}
                     </p>
@@ -611,7 +614,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol">₱</span>
-                    <span className="value-amount">{(it.expenseValue || 0).toLocaleString()}</span>
+                    <span className="value-amount">{isPrivacyMode ? '***' : Number(it.expenseValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="card-date-label">{it.date}</div>
                 </div>
@@ -646,9 +649,11 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
         </div>
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
-        <PenIcon />
-      </button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
+          <PenIcon />
+        </button>
+      )}
 
       {isCreateModalOpen && (
         <div className="modal-overlay" onClick={() => !isCreating && setIsCreateModalOpen(false)}>
@@ -668,7 +673,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                </div>
               <div className="input-group">
                 <label>Value (₱)</label>
-                <input type="number" value={newItem.expenseValue} onChange={e => setNewItem({...newItem, expenseValue: e.target.value})} />
+                <input type="number" step="0.01" value={newItem.expenseValue} onChange={e => setNewItem({...newItem, expenseValue: e.target.value})} />
               </div>
               <div className="input-group">
                  <label>Salary Date</label>
@@ -714,7 +719,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                     </div>
                     <div className="input-group">
                       <label>Value (₱)</label>
-                      <input type="number" value={editItem.expenseValue || 0} onChange={e => setEditItem({...editItem, expenseValue: Number(e.target.value)})} />
+                      <input type="number" step="0.01" value={editItem.expenseValue || 0} onChange={e => setEditItem({...editItem, expenseValue: Number(e.target.value)})} />
                     </div>
                     <div className="input-group">
                       <label>Salary Record</label>
@@ -742,11 +747,11 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                   <>
                     <div className="alloc-detail-header">
                       <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.expenseType) }}>{getInitial(selectedItem.expenseDescription)}</div>
-                      <h2>{selectedItem.expenseDescription}</h2>
+                      <h2>{maskText(selectedItem.expenseDescription, isPrivacyMode)}</h2>
                       <span style={{ color: getColor(selectedItem.expenseType), fontWeight: '600' }}>{selectedItem.expenseType}</span>
                     </div>
                     <div className="detail-grid">
-                      <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.expenseValue || 0).toLocaleString()}</p></div>
+                      <div className="detail-group"><label>Amount</label><p>₱{isPrivacyMode ? '***' : Number(selectedItem.expenseValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div>
                       <div className="detail-group"><label>Expense Type</label><p>{selectedItem.expenseType}</p></div>
                       <div className="detail-group">
                         <label>Salary Record</label>
@@ -773,7 +778,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
                       <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                       <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
-                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
+                    {!isPrivacyMode && <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>}
                   </>
                 )}
               </div>
@@ -892,7 +897,7 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord }: Allocation
             <h2 className="form-title">Salary Information</h2>
             {isSalaryInfoLoading ? <p>Fetching salary details...</p> : salaryInfo ? (
               <div className="detail-grid" style={{ marginTop: '20px' }}>
-                <div className="detail-group"><label>Salary Amount</label><p>₱{(salaryInfo.salary || 0).toLocaleString()}</p></div>
+                <div className="detail-group"><label>Salary Amount</label><p>₱{maskAmount(salaryInfo.salary || 0, isPrivacyMode)}</p></div>
                 <div className="detail-group"><label>Salary Date</label><p>{salaryInfo.date}</p></div>
                 <div className="detail-group"><label>Status</label><p>{salaryInfo.status}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{salaryInfo.dateAdded}</p></div>
