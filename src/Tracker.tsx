@@ -516,20 +516,20 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMod
         <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
         
         {selectedSalaryId && items.length > 0 && (
-          <div className="chart-container slide-in-top" style={{ marginTop: '0', marginBottom: '24px', height: 'auto', background: 'white', borderRadius: '24px', padding: '24px', border: '1px solid #f3f4f6' }}>
-            <div className="chart-header" style={{ marginBottom: '20px', padding: 0 }}>
-              <span className="chart-title" style={{ fontSize: '15px' }}>Allocation Distribution</span>
+          <div className="chart-container slide-in-top">
+            <div className="chart-header">
+              <span className="chart-title">Allocation Distribution</span>
               <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase' }}>{items.length} ALLOCATIONS</span>
             </div>
-            <div style={{ height: '300px', width: '100%' }}>
+            <div style={{ height: '320px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
+                    innerRadius="60%"
+                    outerRadius="85%"
                     paddingAngle={5}
                     dataKey="value"
                     animationBegin={0}
@@ -555,23 +555,20 @@ export default function Tracker({ onBack, onNavigateToSalaryRecord, isPrivacyMod
           </div>
         )}
         {selectedSalaryId && salaryInfo && items.length > 0 && (
-          <section className="summary-banner" style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f3f4f6' }}>
+          <section className="summary-banner">
             <div className="summary-item">
-              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Salary Amount</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#111827' }}>₱{isPrivacyMode ? '***' : Number(salaryInfo.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <span>Salary Amount</span>
+              <h3>₱{isPrivacyMode ? '***' : Number(salaryInfo.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
-            <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
+            <div className="summary-divider"></div>
             <div className="summary-item">
-              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Expenses</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: '700', color: '#ef4444' }}>₱{isPrivacyMode ? '***' : items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+              <span>Total Expenses</span>
+              <h3 style={{ color: '#ef4444' }}>₱{isPrivacyMode ? '***' : items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
-            <div className="summary-divider" style={{ width: '1px', height: '40px', background: '#e5e7eb' }}></div>
+            <div className="summary-divider"></div>
             <div className="summary-item" style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Remaining</span>
+              <span>Remaining</span>
               <h3 style={{ 
-                fontSize: '20px', 
-                margin: '4px 0 0', 
-                fontWeight: '700', 
                 color: (salaryInfo.salary - items.reduce((acc, it) => acc + (it.expenseValue || 0), 0)) >= 0 ? '#10b981' : '#ef4444' 
               }}>
                 ₱{isPrivacyMode ? '***' : (Number(salaryInfo.salary) - items.reduce((acc, it) => acc + Number(it.expenseValue || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
