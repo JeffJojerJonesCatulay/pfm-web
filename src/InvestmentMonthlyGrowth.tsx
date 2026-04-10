@@ -36,7 +36,7 @@ interface InvestmentMonthlyGrowthProps {
   isPrivacyMode: boolean;
 }
 
-import { maskAmount, maskText } from './utils/privacyUtils';
+import { maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
