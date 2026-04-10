@@ -31,7 +31,10 @@ interface YearlyGrowthRecord {
 
 interface InvestmentYearlyGrowthProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -49,7 +52,7 @@ const PenIcon = () => (
 
 const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
 
-export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowthProps) {
+export default function InvestmentYearlyGrowth({ onBack, isPrivacyMode }: InvestmentYearlyGrowthProps) {
   const [items, setItems] = useState<YearlyGrowthRecord[]>([]);
   const [yearFilter, setYearFilter] = useState<string>('All');
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
@@ -158,7 +161,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
     return [...filteredItems].sort((a, b) => a.year - b.year)
     .map(it => ({
       name: it.year.toString(),
-      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      allocation: maskText(allocationMap[it.allocId], isPrivacyMode) || `Account #${it.allocId}`,
       valuation: it.averageCurrentValue,
       growth: it.averageGrowthRate,
       allocId: it.allocId,
@@ -173,9 +176,9 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
         <div className="custom-tooltip">
           <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900 }}>{data.allocation}</p>
           <p className="tooltip-label">FY {data.name}</p>
-          <p className="tooltip-value">₱{data.valuation.toLocaleString()}</p>
+          <p className="tooltip-value">₱{isPrivacyMode ? '***' : data.valuation.toLocaleString()}</p>
           <p style={{ fontSize: '10px', color: data.growth >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
-            {data.growth > 0 ? '+' : ''}{data.growth}% Avg. Growth
+            {isPrivacyMode ? '***' : (data.growth > 0 ? '+' : '') + data.growth}% Avg. Growth
           </p>
         </div>
       );
@@ -198,7 +201,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
             <div className="status-pill-container">
               <p className="allocations-subtitle status-pill">
                 {selectedAllocId ? (
-                  `${allocationMap[selectedAllocId] || '...'} • ANNUAL TRENDS`
+                  `${maskText(allocationMap[selectedAllocId], isPrivacyMode) || '...'} • ANNUAL TRENDS`
                 ) : `ALL PORTFOLIOS • ${items.length} RECORDS`}
               </p>
             </div>
@@ -277,7 +280,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                         dataKey="growth" 
                         position="top" 
                         offset={10}
-                        formatter={(val: any) => `${Number(val) > 0 ? '+' : ''}${val}%`}
+                        formatter={(val: any) => isPrivacyMode ? '***%' : `${Number(val) > 0 ? '+' : ''}${val}%`}
                         style={{ fontSize: '10px', fontWeight: 'bold', fill: '#6b7280' }}
                       />
                       {chartData.map((entry, index) => (
@@ -315,17 +318,17 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                     {item.year}
                   </div>
                   <div className="alloc-info" style={{ gap: '2px' }}>
-                    <h3 className="alloc-name" style={{ fontSize: '17px' }}>{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
-                    <p className="alloc-meta">Annual Audit &bull; ₱ {item.averageContribution?.toLocaleString()}/mo avg.</p>
+                    <h3 className="alloc-name" style={{ fontSize: '17px' }}>{maskText(allocationMap[item.allocId], isPrivacyMode) || `Account #${item.allocId}`}</h3>
+                    <p className="alloc-meta">Annual Audit &bull; ₱ {isPrivacyMode ? '***' : item.averageContribution?.toLocaleString()}/mo avg.</p>
                   </div>
                 </div>
                 
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol" style={{ color: '#059669' }}>+</span>
-                    <span className="value-amount" style={{ color: '#10b981' }}>{item.averageGrowthRate}%</span>
+                    <span className="value-amount" style={{ color: '#10b981' }}>{isPrivacyMode ? '***' : item.averageGrowthRate}%</span>
                   </div>
-                  <div className="card-date-label">Avg. Value: ₱ {item.averageCurrentValue?.toLocaleString()}</div>
+                  <div className="card-date-label">Avg. Value: ₱ {isPrivacyMode ? '***' : item.averageCurrentValue?.toLocaleString()}</div>
                 </div>
               </div>
             ))}
@@ -405,7 +408,7 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                 >
                   <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>{getInitial(opt.allocation)}</div>
                   <div className="alloc-info" style={{ textAlign: 'left' }}>
-                    <h3 className="alloc-name">{opt.allocation}</h3>
+                    <h3 className="alloc-name">{maskText(opt.allocation, isPrivacyMode)}</h3>
                     <p className="alloc-meta">{opt.type}</p>
                   </div>
                 </button>
@@ -436,29 +439,29 @@ export default function InvestmentYearlyGrowth({ onBack }: InvestmentYearlyGrowt
                       {selectedItem.year}
                     </div>
                     <h2>Annual Record {selectedItem.year}</h2>
-                    <p style={{ color: '#6b7280', fontSize: '14px' }}>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</p>
+                    <p style={{ color: '#6b7280', fontSize: '14px' }}>{maskText(allocationMap[selectedItem.allocId], isPrivacyMode) || `Account #${selectedItem.allocId}`}</p>
                   </div>
 
                   <div className="detail-grid">
                     <div className="detail-group">
                       <label>Avg. Valuation</label>
                       <p style={{ color: '#10b981', fontWeight: '800', fontSize: '1.2rem' }}>
-                        ₱ {selectedItem.averageCurrentValue?.toLocaleString()}
+                        ₱ {isPrivacyMode ? '***' : selectedItem.averageCurrentValue?.toLocaleString()}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>Avg. Growth Rate</label>
                       <p style={{ color: '#10b981', fontWeight: '700' }}>
-                        +{selectedItem.averageGrowthRate}%
+                        {isPrivacyMode ? '***%' : `+${selectedItem.averageGrowthRate}%`}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>Avg. Contribution</label>
-                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.averageContribution?.toLocaleString()}</p>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {isPrivacyMode ? '***' : selectedItem.averageContribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
                       <label>Total Contribution</label>
-                      <p style={{ fontWeight: '600' }}>₱ {selectedItem.totalContribution?.toLocaleString()}</p>
+                      <p style={{ fontWeight: '600' }}>₱ {isPrivacyMode ? '***' : selectedItem.totalContribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
                       <label>Date Added</label>

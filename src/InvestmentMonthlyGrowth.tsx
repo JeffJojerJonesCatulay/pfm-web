@@ -33,7 +33,10 @@ interface GrowthRecord {
 
 interface InvestmentMonthlyGrowthProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -56,7 +59,7 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
 
-export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGrowthProps) {
+export default function InvestmentMonthlyGrowth({ onBack, isPrivacyMode }: InvestmentMonthlyGrowthProps) {
   const [items, setItems] = useState<GrowthRecord[]>([]);
   const [monthFilter, setMonthFilter] = useState<string>(MONTHS[new Date().getMonth()]);
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
@@ -175,7 +178,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
     }).map(it => ({
       name: it.month.substring(0, 3) + ' ' + (it.year % 100),
       label: it.month.substring(0, 3) + ' ' + (it.year % 100), // X-axis label
-      allocation: allocationMap[it.allocId] || `Account #${it.allocId}`,
+      allocation: maskText(allocationMap[it.allocId], isPrivacyMode) || `Account #${it.allocId}`,
       valuation: it.currentValue,
       growth: it.growthRate,
       allocId: it.allocId,
@@ -190,9 +193,9 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
         <div className="custom-tooltip">
           <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900 }}>{data.allocation}</p>
           <p className="tooltip-label">{data.name}</p>
-          <p className="tooltip-value">₱{data.valuation.toLocaleString()}</p>
+          <p className="tooltip-value">₱{isPrivacyMode ? '***' : data.valuation.toLocaleString()}</p>
           <p style={{ fontSize: '10px', color: data.growth >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
-            {data.growth > 0 ? '+' : ''}{data.growth}% Growth
+            {isPrivacyMode ? '***' : (data.growth > 0 ? '+' : '') + data.growth}% Growth
           </p>
         </div>
       );
@@ -218,7 +221,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
             <div className="status-pill-container">
               <p className="allocations-subtitle status-pill">
                 {selectedAllocId ? (
-                  `${allocationMap[selectedAllocId] || '...'} • ANALYTICS`
+                  `${maskText(allocationMap[selectedAllocId], isPrivacyMode) || '...'} • ANALYTICS`
                 ) : `ALL PORTFOLIOS • ${items.length} RECORDS`}
               </p>
             </div>
@@ -312,7 +315,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                         dataKey="growth" 
                         position="top" 
                         offset={10}
-                        formatter={(val: any) => `${Number(val) > 0 ? '+' : ''}${val}%`}
+                        formatter={(val: any) => isPrivacyMode ? '***%' : `${Number(val) > 0 ? '+' : ''}${val}%`}
                         style={{ fontSize: '10px', fontWeight: 'bold', fill: '#6b7280' }}
                       />
                       {chartData.map((entry, index) => (
@@ -348,9 +351,9 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                     {getInitial(allocationMap[item.allocId])}
                   </div>
                   <div className="alloc-info" style={{ gap: '2px' }}>
-                    <h3 className="alloc-name" style={{ fontSize: '17px' }}>{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
+                    <h3 className="alloc-name" style={{ fontSize: '17px' }}>{maskText(allocationMap[item.allocId], isPrivacyMode) || `Account #${item.allocId}`}</h3>
                     <p className="alloc-meta">
-                      {item.month} {item.year} &bull; ₱{item.contribution?.toLocaleString()}
+                      {maskText(item.month, isPrivacyMode)} {item.year} &bull; ₱{isPrivacyMode ? '***' : item.contribution?.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -358,9 +361,9 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol" style={{ color: item.growthRate >= 0 ? '#059669' : '#dc2626' }}>{item.growthRate >= 0 ? '+' : ''}</span>
-                    <span className="value-amount" style={{ color: item.growthRate >= 0 ? '#10b981' : '#ef4444' }}>{item.growthRate}%</span>
+                    <span className="value-amount" style={{ color: item.growthRate >= 0 ? '#10b981' : '#ef4444' }}>{isPrivacyMode ? '***' : item.growthRate}%</span>
                   </div>
-                  <div className="card-date-label">Valuation: ₱ {item.currentValue?.toLocaleString()}</div>
+                  <div className="card-date-label">Valuation: ₱ {isPrivacyMode ? '***' : item.currentValue?.toLocaleString()}</div>
                 </div>
               </div>
             ))}
@@ -440,7 +443,7 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                 >
                   <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>{getInitial(opt.allocation)}</div>
                   <div className="alloc-info" style={{ textAlign: 'left' }}>
-                    <h3 className="alloc-name">{opt.allocation}</h3>
+                    <h3 className="alloc-name">{maskText(opt.allocation, isPrivacyMode)}</h3>
                     <p className="alloc-meta">{opt.type}</p>
                   </div>
                 </button>
@@ -470,30 +473,30 @@ export default function InvestmentMonthlyGrowth({ onBack }: InvestmentMonthlyGro
                     <div className="alloc-avatar large" style={{ backgroundColor: selectedItem.growthRate >= 0 ? '#10b981' : '#ef4444' }}>
                       {getInitial(allocationMap[selectedItem.allocId])}
                     </div>
-                    <h2>{selectedItem.month} {selectedItem.year}</h2>
-                    <p style={{ color: '#6b7280', fontSize: '14px' }}>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</p>
+                    <h2>{maskText(selectedItem.month, isPrivacyMode)} {selectedItem.year}</h2>
+                    <p style={{ color: '#6b7280', fontSize: '14px' }}>{maskText(allocationMap[selectedItem.allocId], isPrivacyMode) || `Account #${selectedItem.allocId}`}</p>
                   </div>
 
                   <div className="detail-grid">
                     <div className="detail-group">
                       <label>Period Valuation</label>
                       <p style={{ color: selectedItem.growthRate >= 0 ? '#10b981' : '#ef4444', fontWeight: '800', fontSize: '1.2rem' }}>
-                        ₱ {selectedItem.currentValue?.toLocaleString()}
+                        ₱ {isPrivacyMode ? '***' : selectedItem.currentValue?.toLocaleString()}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>Growth Rate</label>
                       <p style={{ color: selectedItem.growthRate >= 0 ? '#10b981' : '#ef4444', fontWeight: '700' }}>
-                        {selectedItem.growthRate >= 0 ? '+' : ''}{selectedItem.growthRate}%
+                        {isPrivacyMode ? '***%' : `${selectedItem.growthRate >= 0 ? '+' : ''}${selectedItem.growthRate}%`}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>New Contribution</label>
-                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.contribution?.toLocaleString()}</p>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {isPrivacyMode ? '***' : selectedItem.contribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
                       <label>Total Invested</label>
-                      <p style={{ fontWeight: '600' }}>₱ {selectedItem.totalContribution?.toLocaleString()}</p>
+                      <p style={{ fontWeight: '600' }}>₱ {isPrivacyMode ? '***' : selectedItem.totalContribution?.toLocaleString()}</p>
                     </div>
                     <div className="detail-group">
                       <label>Date Added</label>

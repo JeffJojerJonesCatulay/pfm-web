@@ -26,6 +26,7 @@ interface SalaryRecordItem {
 
 interface SalaryRecordProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
 
 const BackIcon = () => (
@@ -49,7 +50,7 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function SalaryRecord({ onBack }: SalaryRecordProps) {
+export default function SalaryRecord({ onBack, isPrivacyMode }: SalaryRecordProps) {
   const [items, setItems] = useState<SalaryRecordItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -230,7 +231,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
           <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{payload[0].payload.name}</p>
           <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
             <p className="tooltip-value" style={{ color: '#6366f1', fontWeight: 800, fontSize: '15px' }}>
-              ₱{Number(payload[0].value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₱{isPrivacyMode ? '***' : Number(payload[0].value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
@@ -322,7 +323,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
               <div key={it.salaryId || i} className="allocation-card clickable-card" onClick={() => handleCardClick(it.salaryId)}>
                 <div className="alloc-avatar" style={{ backgroundColor: '#2ecc71' }}>₱</div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">₱{Number(it.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                  <h3 className="alloc-name">₱{isPrivacyMode ? '***' : Number(it.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                   <p className="alloc-meta">{it.status}</p>
                 </div>
                 <div className="alloc-date">{it.dateAdded || ''}</div>
@@ -357,7 +358,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
         </div>
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>
+      {!isPrivacyMode && <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>}
 
       {/* SEARCH MODAL */}
       {isSearchModalOpen && (
@@ -420,7 +421,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                   <>
                     <div className="alloc-detail-header">
                       <div className="alloc-avatar large" style={{ backgroundColor: '#2ecc71' }}>₱</div>
-                      <h2>₱{Number(selectedItem.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                      <h2>₱{isPrivacyMode ? '***' : Number(selectedItem.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
                       <span style={{ color: '#2ecc71', fontWeight: '600' }}>{selectedItem.status}</span>
                     </div>
                     <div className="detail-grid">
@@ -428,7 +429,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                       <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                       <div className="detail-group"><label>Last Updated</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
-                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
+                    {!isPrivacyMode && <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>}
                   </>
                 )}
               </div>

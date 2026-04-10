@@ -20,7 +20,10 @@ interface ConnectedAppItem {
 
 interface ConnectedAppsProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -49,7 +52,7 @@ const PlusIcon = () => (
   </svg>
 );
 
-export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
+export default function ConnectedApps({ onBack, isPrivacyMode }: ConnectedAppsProps) {
   const [items, setItems] = useState<ConnectedAppItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -346,14 +349,16 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
           </div>
           
           <div className="header-right" style={{ gap: '10px' }}>
-            <button 
-              className="premium-action-pill" 
-              onClick={() => { fetchCCOptions(); setIsCCModalOpen(true); }}
-              title="Filter by Card"
-            >
-              <div className="pill-icon"><FilterIcon /></div>
-              <span className="hide-mobile">Filter CC</span>
-            </button>
+            {!isPrivacyMode && (
+              <button 
+                className="premium-action-pill" 
+                onClick={() => { fetchCCOptions(); setIsCCModalOpen(true); }}
+                title="Filter by Card"
+              >
+                <div className="pill-icon"><FilterIcon /></div>
+                <span className="hide-mobile">Filter CC</span>
+              </button>
+            )}
             <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
               <SearchIcon />
             </button>
@@ -400,8 +405,8 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                 </div>
                 <div className="alloc-info">
                   <h3 className="alloc-name">
-                    {it.connectedApp}
-                    {it.subscription ? ` (${it.subscription})` : ''}
+                    {maskText(it.connectedApp || '', isPrivacyMode)}
+                    {it.subscription ? ` (${maskText(it.subscription, isPrivacyMode)})` : ''}
                   </h3>
                   <p className="alloc-meta">
                     {it.autoDebit} &bull; {ccOptions.find(c => c.ccId === it.ccId)?.ccAcronym || 'Credit Card'}
@@ -411,7 +416,7 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
               <div className="card-value-display">
                 <div className="card-amount-wrapper">
                   <span className="currency-symbol">₱</span>
-                  <span className="value-amount">{(it.amount || 0).toLocaleString()}</span>
+                  <span className="value-amount">{isPrivacyMode ? '***' : (it.amount || 0).toLocaleString()}</span>
                 </div>
                 <div className="card-date-label">{it.dateAdded}</div>
               </div>
@@ -450,9 +455,11 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
         )}
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
-        <PlusIcon />
-      </button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
+          <PlusIcon />
+        </button>
+      )}
 
       {/* Detail Modal */}
       {isModalOpen && selectedItem && (
@@ -461,20 +468,20 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
             <div className="alloc-detail-content">
               <div className="alloc-detail-header">
                 <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>{getInitial(selectedItem.connectedApp)}</div>
-                <h2>{selectedItem.connectedApp}</h2>
-                <p>{selectedItem.subscription}</p>
+                <h2>{maskText(selectedItem.connectedApp || '', isPrivacyMode)}</h2>
+                <p>{maskText(selectedItem.subscription || '', isPrivacyMode)}</p>
               </div>
               <div className="detail-grid">
                 <div className="detail-group">
                   <label>Source Card</label>
                   <p>
                     {ccOptions.find(c => c.ccId === selectedItem.ccId) 
-                      ? `${ccOptions.find(c => c.ccId === selectedItem.ccId).ccName} (**** ${ccOptions.find(c => c.ccId === selectedItem.ccId).ccLastDigit})`
+                      ? `${maskText(ccOptions.find(c => c.ccId === selectedItem.ccId)?.ccName || '', isPrivacyMode)} (**** ${isPrivacyMode ? '****' : ccOptions.find(c => c.ccId === selectedItem.ccId)?.ccLastDigit})`
                       : 'Not Linked'
                     }
                   </p>
                 </div>
-                <div className="detail-group"><label>Amount</label><p>₱{(selectedItem.amount || 0).toLocaleString()}</p></div>
+                <div className="detail-group"><label>Amount</label><p>₱{isPrivacyMode ? '***' : (selectedItem.amount || 0).toLocaleString()}</p></div>
                 <div className="detail-group"><label>Auto Debit</label><p>{selectedItem.autoDebit}</p></div>
                 {selectedItem.autoDebit === 'Enabled' && (
                   <div className="detail-group"><label>Next Billing</label><p>{selectedItem.date || '—'}</p></div>
@@ -484,14 +491,16 @@ export default function ConnectedApps({ onBack }: ConnectedAppsProps) {
                 <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
-                <button className="primary-btn" style={{ flex: 1 }} onClick={() => {
-                  setEditItem(selectedItem);
-                  setIsEditing(true);
-                  setIsModalOpen(false);
-                }}>Edit Details</button>
-                <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleDelete(selectedItem.id!)}>Disconnect</button>
-              </div>
+              {!isPrivacyMode && (
+                <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
+                  <button className="primary-btn" style={{ flex: 1 }} onClick={() => {
+                    setEditItem(selectedItem);
+                    setIsEditing(true);
+                    setIsModalOpen(false);
+                  }}>Edit Details</button>
+                  <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => handleDelete(selectedItem.id!)}>Disconnect</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
