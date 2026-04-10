@@ -26,6 +26,7 @@ interface SalaryRecordItem {
 
 interface SalaryRecordProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
 
 const BackIcon = () => (
@@ -49,7 +50,7 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function SalaryRecord({ onBack }: SalaryRecordProps) {
+export default function SalaryRecord({ onBack, isPrivacyMode }: SalaryRecordProps) {
   const [items, setItems] = useState<SalaryRecordItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -230,7 +231,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
           <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{payload[0].payload.name}</p>
           <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
             <p className="tooltip-value" style={{ color: '#6366f1', fontWeight: 800, fontSize: '15px' }}>
-              ₱{payload[0].value.toLocaleString()}
+              ₱{isPrivacyMode ? '***' : Number(payload[0].value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
@@ -322,7 +323,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
               <div key={it.salaryId || i} className="allocation-card clickable-card" onClick={() => handleCardClick(it.salaryId)}>
                 <div className="alloc-avatar" style={{ backgroundColor: '#2ecc71' }}>₱</div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">₱{(it.salary || 0).toLocaleString()}</h3>
+                  <h3 className="alloc-name">₱{isPrivacyMode ? '***' : Number(it.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
                   <p className="alloc-meta">{it.status}</p>
                 </div>
                 <div className="alloc-date">{it.dateAdded || ''}</div>
@@ -357,7 +358,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
         </div>
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>
+      {!isPrivacyMode && <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>}
 
       {/* SEARCH MODAL */}
       {isSearchModalOpen && (
@@ -390,7 +391,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2 className="form-title">Add Salary Record</h2>
             <form className="login-form">
-              <div className="input-group"><label>Salary Amount (₱)</label><input type="number" value={newItem.salary} onChange={e => setNewItem({...newItem, salary: e.target.value})} /></div>
+              <div className="input-group"><label>Salary Amount (₱)</label><input type="number" step="0.01" value={newItem.salary} onChange={e => setNewItem({...newItem, salary: e.target.value})} /></div>
               <div className="input-group"><label>Salary Date</label><input type="date" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} /></div>
               <div className="input-group"><label>Status</label><select className="dropdown-select" value={newItem.status} onChange={e => setNewItem({...newItem, status: e.target.value})}><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
               <button type="button" className="primary-btn margin-top-lg" onClick={handleCreate} disabled={isCreating}>{isCreating ? 'Processing...' : 'Save Record'}</button>
@@ -408,7 +409,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                 {isEditing ? (
                   <div className="login-form">
                     <h2 className="form-title">Edit Record</h2>
-                    <div className="input-group"><label>Salary Amount (₱)</label><input type="number" value={editItem.salary || 0} onChange={e => setEditItem({...editItem, salary: Number(e.target.value)})} /></div>
+                    <div className="input-group"><label>Salary Amount (₱)</label><input type="number" step="0.01" value={editItem.salary || 0} onChange={e => setEditItem({...editItem, salary: Number(e.target.value)})} /></div>
                     <div className="input-group"><label>Salary Date</label><input type="date" value={editItem.date || ''} onChange={e => setEditItem({...editItem, date: e.target.value})} /></div>
                     <div className="input-group"><label>Status</label><select value={editItem.status || ''} onChange={e => setEditItem({...editItem, status: e.target.value})} className="dropdown-select"><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
                     <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
@@ -420,7 +421,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                   <>
                     <div className="alloc-detail-header">
                       <div className="alloc-avatar large" style={{ backgroundColor: '#2ecc71' }}>₱</div>
-                      <h2>₱{(selectedItem.salary || 0).toLocaleString()}</h2>
+                      <h2>₱{isPrivacyMode ? '***' : Number(selectedItem.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
                       <span style={{ color: '#2ecc71', fontWeight: '600' }}>{selectedItem.status}</span>
                     </div>
                     <div className="detail-grid">
@@ -428,7 +429,7 @@ export default function SalaryRecord({ onBack }: SalaryRecordProps) {
                       <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                       <div className="detail-group"><label>Last Updated</label><p>{selectedItem.updateDate || '—'}</p></div>
                     </div>
-                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>
+                    {!isPrivacyMode && <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit Record</button>}
                   </>
                 )}
               </div>

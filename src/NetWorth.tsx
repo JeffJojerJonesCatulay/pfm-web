@@ -14,7 +14,10 @@ import './css/App.css';
 
 interface NetWorthProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +33,7 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 10 }, (_, i) => 2026 + i);
 
-export default function NetWorth({ onBack }: NetWorthProps) {
+export default function NetWorth({ onBack, isPrivacyMode }: NetWorthProps) {
   const [monthlyGrowthData, setMonthlyGrowthData] = useState<any[]>([]);
   const [allocationOptions, setAllocationOptions] = useState<any[]>([]);
   const [monthFilter, setMonthFilter] = useState<string>(MONTHS[new Date().getMonth()]);
@@ -160,10 +163,10 @@ export default function NetWorth({ onBack }: NetWorthProps) {
 
   const pieData = useMemo(() => {
     return filteredContributions.map(c => ({
-      name: getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`,
+      name: maskText(getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`, isPrivacyMode),
       value: c.currentValue || 0
     })).filter(it => it.value > 0).sort((a, b) => b.value - a.value);
-  }, [filteredContributions, allocationOptions]);
+  }, [filteredContributions, allocationOptions, isPrivacyMode]);
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -172,7 +175,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
         <div className="custom-tooltip shadow-soft" style={{ background: 'rgba(255, 255, 255, 0.98)', border: 'none', padding: '12px', borderRadius: '12px' }}>
           <p className="tooltip-label" style={{ margin: 0, fontWeight: 800, color: '#111827' }}>{data.name}</p>
           <p className="tooltip-value" style={{ margin: '4px 0 0', color: '#6366f1', fontWeight: 700, fontSize: '15px' }}>
-            ₱{data.value.toLocaleString()}
+            ₱{isPrivacyMode ? '***' : data.value.toLocaleString()}
           </p>
         </div>
       );
@@ -359,8 +362,8 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                                         border: '1px solid #f3f4f6',
                                         fontSize: '12px'
                                       }}>
-                                        <span style={{ fontWeight: '700', color: '#374151' }}>{getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`}:</span>
-                                        <span style={{ fontWeight: '900', color: '#6366f1', marginLeft: '6px' }}>₱{(c.currentValue || 0).toLocaleString()}</span>
+                                        <span style={{ fontWeight: '700', color: '#374151' }}>{maskText(getAllocDetail(c.allocId || c.id || c.allocation)?.allocation || c.allocation || `Account #${c.id}`, isPrivacyMode)}:</span>
+                                        <span style={{ fontWeight: '900', color: '#6366f1', marginLeft: '6px' }}>₱{isPrivacyMode ? '***' : (c.currentValue || 0).toLocaleString()}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -397,7 +400,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                           return (
                             <div key={`${main}-${sub}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f3f4f6' }}>
                                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4b5563' }}>{main} {sub === 'General' ? '' : sub}:</span>
-                               <span style={{ fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>₱{total.toLocaleString()}</span>
+                               <span style={{ fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>₱{isPrivacyMode ? '***' : total.toLocaleString()}</span>
                             </div>
                           );
                         });
@@ -416,7 +419,7 @@ export default function NetWorth({ onBack }: NetWorthProps) {
                   }}>
                     <span style={{ fontSize: '13px', fontWeight: '900', color: '#111827', letterSpacing: '1px' }}>OVERALL TOTAL</span>
                     <span style={{ fontSize: '24px', fontWeight: '900', color: '#6366f1' }}>
-                      ₱{grandTotal.toLocaleString()}
+                      ₱{isPrivacyMode ? '***' : grandTotal.toLocaleString()}
                     </span>
                   </div>
                 </div>

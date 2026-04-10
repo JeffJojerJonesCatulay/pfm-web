@@ -40,9 +40,12 @@ const PlusIcon = () => (
 
 interface BillingCycleProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
 
-export default function BillingCycle({ onBack }: BillingCycleProps) {
+import { maskText } from './utils/privacyUtils';
+
+export default function BillingCycle({ onBack, isPrivacyMode }: BillingCycleProps) {
   const [items, setItems] = useState<BillingCycleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -361,7 +364,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                     </div>
                     <div className="alloc-info">
                       <h3 className="alloc-name">
-                        {ccDetailsMap[it.ccId || 0]?.ccName || `Reference #${it.ccRecId}`}
+                        {ccDetailsMap[it.ccId || 0] ? maskText(ccDetailsMap[it.ccId!].ccName, isPrivacyMode) : `Reference #${it.ccRecId}`}
                       </h3>
                       <p className="alloc-meta">
                         Cutoff: {it.dateTo} &bull; Due: {it.dueDate}
@@ -417,9 +420,11 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
         </div>
       </main>
 
-      <button className="fab-btn" onClick={() => { setIsCreateModalOpen(true); fetchCcOptions(); }}>
-        <PlusIcon />
-      </button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => { setIsCreateModalOpen(true); fetchCcOptions(); }}>
+          <PlusIcon />
+        </button>
+      )}
 
       {/* Create Modal */}
       {isCreateModalOpen && (
@@ -564,7 +569,7 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                     <div className="alloc-avatar large" style={{ backgroundColor: getColor(selectedItem.status) }}>
                       {ccDetailsMap[selectedItem.ccId || 0] ? getInitial(ccDetailsMap[selectedItem.ccId!].ccName) : getInitial(selectedItem.status)}
                     </div>
-                    <h2>{ccDetailsMap[selectedItem.ccId || 0]?.ccName || `Billing Reference: ${selectedItem.ccRecId}`}</h2>
+                    <h2>{ccDetailsMap[selectedItem.ccId || 0] ? maskText(ccDetailsMap[selectedItem.ccId!].ccName, isPrivacyMode) : `Billing Reference: ${selectedItem.ccRecId}`}</h2>
                     <span style={{ color: getColor(selectedItem.status), fontWeight: '600' }}>{selectedItem.status}</span>
                   </div>
                   
@@ -587,15 +592,15 @@ export default function BillingCycle({ onBack }: BillingCycleProps) {
                     <div style={{ marginTop: '24px', padding: '16px', border: '1px solid #e5e7eb', borderRadius: '12px', backgroundColor: '#f9fafb' }}>
                       <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#374151', fontWeight: 'bold' }}>Credit Card Details</h3>
                       <div className="detail-grid" style={{ gap: '12px' }}>
-                        <div className="detail-group"><label>Card Name</label><p>{ccDetailsMap[selectedItem.ccId!].ccName}</p></div>
+                        <div className="detail-group"><label>Card Name</label><p>{maskText(ccDetailsMap[selectedItem.ccId!].ccName, isPrivacyMode)}</p></div>
                         <div className="detail-group"><label>Acronym</label><p>{ccDetailsMap[selectedItem.ccId!].ccAcronym}</p></div>
-                        <div className="detail-group"><label>Last 4 Digits</label><p>**** {ccDetailsMap[selectedItem.ccId!].ccLastDigit}</p></div>
+                        <div className="detail-group"><label>Last 4 Digits</label><p>{isPrivacyMode ? '****' : `**** ${ccDetailsMap[selectedItem.ccId!].ccLastDigit}`}</p></div>
                       </div>
                     </div>
                   )}
 
                   <div style={{ display: 'flex', gap: '12px', marginTop: '30px', flexDirection: 'column' }}>
-                    <button className="secondary-btn" onClick={() => { setEditItem(selectedItem); setIsEditing(true); if (ccOptions.length === 0) fetchCcOptions(); }}>Edit Record</button>
+                    {!isPrivacyMode && <button className="secondary-btn" onClick={() => { setEditItem(selectedItem); setIsEditing(true); if (ccOptions.length === 0) fetchCcOptions(); }}>Edit Record</button>}
                     <button className="primary-btn" onClick={() => setIsModalOpen(false)}>Close View</button>
                   </div>
                 </>

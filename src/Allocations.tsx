@@ -18,7 +18,10 @@ interface AllocationItem {
 
 interface AllocationsProps {
   onBack: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -41,7 +44,7 @@ const PenIcon = () => (
   </svg>
 );
 
-export default function Allocations({ onBack }: AllocationsProps) {
+export default function Allocations({ onBack, isPrivacyMode }: AllocationsProps) {
   const [allocations, setAllocations] = useState<AllocationItem[]>([]);
   const [page, setPage] = useState(0);
   const [isLastPage, setIsLastPage] = useState(true);
@@ -289,7 +292,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
               <div key={alloc.allocId || i} className="allocation-card clickable-card" onClick={() => handleCardClick(alloc.allocId)}>
                 <div className="alloc-avatar" style={{ backgroundColor: getColor(alloc.type) }}>{getInitial(alloc.allocation)}</div>
                 <div className="alloc-info">
-                  <h3 className="alloc-name">{alloc.allocation || 'Unnamed'}</h3>
+                  <h3 className="alloc-name">{maskText(alloc.allocation || '', isPrivacyMode) || 'Unnamed'}</h3>
                   <p className="alloc-meta">{alloc.type || 'Unknown'} &bull; <span style={{ color: alloc.status === 'Active' ? '#3CAE5A' : '#9ca3af' }}>{alloc.status || 'Not Active'}</span></p>
                 </div>
                 <div className="alloc-date">{alloc.dateAdded || ''}</div>
@@ -322,7 +325,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
         )}
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>
+      {!isPrivacyMode && <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PenIcon /></button>}
 
       {/* CREATE MODAL */}
       {isCreateModalOpen && (
@@ -379,7 +382,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
                   </div>
                 ) : (
                   <>
-                    <h2 className="alloc-detail-header">{selectedAllocation.allocation}</h2>
+                    <h2 className="alloc-detail-header">{maskText(selectedAllocation.allocation || '', isPrivacyMode)}</h2>
                     <div className="detail-grid">
                       <div className="detail-group"><label>Type</label><p>{selectedAllocation.type}</p></div>
                       <div className="detail-group"><label>Status</label><p>{selectedAllocation.status}</p></div>
@@ -387,7 +390,7 @@ export default function Allocations({ onBack }: AllocationsProps) {
                       <div className="detail-group"><label>Description</label><p>{selectedAllocation.description || '—'}</p></div>
                       <div className="detail-group"><label>Last Updated</label><p>{selectedAllocation.updateDate || '—'}</p></div>
                     </div>
-                    <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit</button>
+                    {!isPrivacyMode && <button className="secondary-btn margin-top-lg" onClick={() => setIsEditing(true)}>Edit</button>}
                   </>
                 )}
               </div>

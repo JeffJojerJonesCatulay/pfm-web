@@ -28,7 +28,10 @@ interface InvestmentProps {
   onBack: () => void;
   onNavigateToMonthlyGrowth: () => void;
   onNavigateToYearlyGrowth: () => void;
+  isPrivacyMode: boolean;
 }
+
+import { maskAmount, maskText } from './utils/privacyUtils';
 
 const BackIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -58,7 +61,7 @@ const TrashIcon = () => (
   </svg>
 );
 
-export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNavigateToYearlyGrowth }: InvestmentProps) {
+export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNavigateToYearlyGrowth, isPrivacyMode }: InvestmentProps) {
   const [items, setItems] = useState<InvestmentItem[]>([]);
   const [selectedAllocId, setSelectedAllocId] = useState<number | null>(null);
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
@@ -264,8 +267,8 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
           <p className="tooltip-label" style={{ color: '#111827', fontWeight: 900, fontSize: '12px' }}>{data.allocation}</p>
           <p className="tooltip-label" style={{ fontSize: '10px', color: '#6b7280' }}>Recorded: {data.name}</p>
           <div style={{ marginTop: '4px', borderTop: '1px solid #f3f4f6', paddingTop: '4px' }}>
-            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{data.valuation.toLocaleString()}</p>
-            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{data.contribution.toLocaleString()}</p>
+            <p className="tooltip-value" style={{ color: '#10b981', fontWeight: 800 }}>₱{isPrivacyMode ? '***' : Number(data.valuation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p style={{ fontSize: '10px', color: '#6b7280' }}>Contribution: ₱{isPrivacyMode ? '***' : Number(data.contribution).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         </div>
       );
@@ -299,8 +302,8 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
               className="premium-action-pill" 
               onClick={() => setIsInitialModalOpen(true)}
             >
-              <div className="pill-icon"><PenIcon /></div>
-              <span>{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
+                <div className="pill-icon"><PenIcon /></div>
+                <span>{selectedAllocId ? 'Switch Fund' : 'Select Account'}</span>
             </button>
           </div>
         </div>
@@ -362,7 +365,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                         dataKey="valuation" 
                         position="top" 
                         offset={10}
-                        formatter={(val: any) => `₱${Number(val).toLocaleString()}`}
+                        formatter={(val: any) => isPrivacyMode ? '₱***' : `₱${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         style={{ fontSize: '9px', fontWeight: 'bold', fill: '#6b7280' }}
                       />
                       {chartData.map((_entry, index) => (
@@ -398,14 +401,14 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                     {getInitial(allocationMap[item.allocId])}
                   </div>
                   <div className="alloc-info">
-                    <h3 className="alloc-name">{allocationMap[item.allocId] || `Account #${item.allocId}`}</h3>
+                    <h3 className="alloc-name">{maskText(allocationMap[item.allocId] || `Account #${item.allocId}`, isPrivacyMode)}</h3>
                     <p className="alloc-meta">{item.date}</p>
                   </div>
                 </div>
                 <div className="card-value-display">
                   <div className="card-amount-wrapper">
                     <span className="currency-symbol">₱</span>
-                    <span className="value-amount">{item.marketValue?.toLocaleString()}</span>
+                    <span className="value-amount">{isPrivacyMode ? '***' : Number(item.marketValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
@@ -486,7 +489,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                 >
                   <div className="alloc-avatar" style={{ backgroundColor: '#10b981' }}>{getInitial(opt.allocation)}</div>
                   <div className="alloc-info" style={{ textAlign: 'left' }}>
-                    <h3 className="alloc-name">{opt.allocation}</h3>
+                    <h3 className="alloc-name">{maskText(opt.allocation, isPrivacyMode)}</h3>
                     <p className="alloc-meta">{opt.type}</p>
                   </div>
                 </button>
@@ -505,7 +508,9 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
         </div>
       )}
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PlusIcon /></button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}><PlusIcon /></button>
+      )}
 
       {/* CREATE MODAL */}
       {isCreateModalOpen && (
@@ -535,6 +540,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                   <label>Value Added (₱)</label>
                   <input 
                     type="number" 
+                    step="0.01"
                     value={newItem.valueAdded} 
                     onChange={e => setNewItem({...newItem, valueAdded: Number(e.target.value)})} 
                     style={{ width: '100%', boxSizing: 'border-box' }}
@@ -544,6 +550,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                   <label>Market Value (₱)</label>
                   <input 
                     type="number" 
+                    step="0.01"
                     value={newItem.marketValue} 
                     onChange={e => setNewItem({...newItem, marketValue: Number(e.target.value)})} 
                     style={{ width: '100%', boxSizing: 'border-box' }}
@@ -588,6 +595,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                       <label>Value Added (₱)</label>
                       <input 
                         type="number" 
+                        step="0.01"
                         value={editItem?.valueAdded || 0} 
                         onChange={e => setEditItem(prev => prev ? ({ ...prev, valueAdded: Number(e.target.value) }) : null)} 
                         style={{ width: '100%', boxSizing: 'border-box' }}
@@ -597,6 +605,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                       <label>Market Value (₱)</label>
                       <input 
                         type="number" 
+                        step="0.01"
                         value={editItem?.marketValue || 0} 
                         onChange={e => setEditItem(prev => prev ? ({ ...prev, marketValue: Number(e.target.value) }) : null)} 
                         style={{ width: '100%', boxSizing: 'border-box' }}
@@ -612,19 +621,21 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
               ) : (
                 <>
                   <div className="alloc-detail-header" style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: '-10px', right: '-10px', display: 'flex', gap: '8px' }}>
-                      <button className="icon-btn sm" onClick={() => { setEditItem(selectedItem); setIsEditing(true); }} style={{ padding: '8px', background: '#f3f4f6', color: '#6366f1' }}>
-                        <PenIcon />
-                      </button>
-                      <button className="icon-btn sm" onClick={promptDelete} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444' }}>
-                        <TrashIcon />
-                      </button>
-                    </div>
+                    {!isPrivacyMode && (
+                      <div style={{ position: 'absolute', top: '-10px', right: '-10px', display: 'flex', gap: '8px' }}>
+                        <button className="icon-btn sm" onClick={() => { setEditItem(selectedItem); setIsEditing(true); }} style={{ padding: '8px', background: '#f3f4f6', color: '#6366f1' }}>
+                          <PenIcon />
+                        </button>
+                        <button className="icon-btn sm" onClick={promptDelete} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444' }}>
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    )}
 
                     <div className="alloc-avatar large" style={{ backgroundColor: '#10b981' }}>
                       {getInitial(allocationMap[selectedItem.allocId])}
                     </div>
-                    <h2>{allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`}</h2>
+                    <h2>{maskText(allocationMap[selectedItem.allocId] || `Account #${selectedItem.allocId}`, isPrivacyMode)}</h2>
                     <p style={{ color: '#6b7280', fontSize: '14px' }}>Recorded on {selectedItem.date}</p>
                   </div>
 
@@ -632,12 +643,12 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                     <div className="detail-group">
                       <label>Market Valuation</label>
                       <p style={{ color: '#10b981', fontWeight: '700', fontSize: '1.2rem' }}>
-                        ₱ {selectedItem.marketValue?.toLocaleString()}
+                        ₱ {isPrivacyMode ? '***' : Number(selectedItem.marketValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div className="detail-group">
                       <label>Value Added</label>
-                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {selectedItem.valueAdded?.toLocaleString()}</p>
+                      <p style={{ color: '#3b82f6', fontWeight: '600' }}>₱ {isPrivacyMode ? '***' : Number(selectedItem.valueAdded || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                   </div>
 
@@ -648,7 +659,7 @@ export default function Investment({ onBack, onNavigateToMonthlyGrowth, onNaviga
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                           <div className="detail-group">
                             <label style={{ fontSize: '10px' }}>Name</label>
-                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{selectedAllocDetail.allocation}</p>
+                            <p style={{ fontSize: '13px', margin: 0, fontWeight: '600' }}>{maskText(selectedAllocDetail.allocation, isPrivacyMode)}</p>
                           </div>
                           <div className="detail-group">
                             <label style={{ fontSize: '10px' }}>Type</label>

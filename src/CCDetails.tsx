@@ -45,10 +45,13 @@ const CreditCardIcon = () => (
 interface CCDetailsProps {
   onBack: () => void;
   onNavigateToConnectedApps: () => void;
+  isPrivacyMode: boolean;
 }
 
+import { maskText } from './utils/privacyUtils';
 
-export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetailsProps) {
+
+export default function CCDetails({ onBack, onNavigateToConnectedApps, isPrivacyMode }: CCDetailsProps) {
   const [items, setItems] = useState<CCDetailItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -254,14 +257,16 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
           </div>
 
           <div className="header-right" style={{ gap: '10px' }}>
-            <button 
-              className="premium-action-pill" 
-              onClick={onNavigateToConnectedApps}
-              title="Connected Apps"
-            >
-              <div className="pill-icon"><CreditCardIcon /></div>
-              <span className="hide-mobile">Apps</span>
-            </button>
+            {!isPrivacyMode && (
+              <button 
+                className="premium-action-pill" 
+                onClick={onNavigateToConnectedApps}
+                title="Connected Apps"
+              >
+                <div className="pill-icon"><CreditCardIcon /></div>
+                <span className="hide-mobile">Apps</span>
+              </button>
+            )}
             <button className="icon-btn search-trigger" onClick={() => setIsSearchModalOpen(true)} aria-label="Search">
               <SearchIcon />
             </button>
@@ -298,9 +303,9 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
                 {getInitial(it.ccAcronym)}
               </div>
               <div className="alloc-info">
-                <h3 className="alloc-name">{it.ccName} ({it.ccAcronym})</h3>
+                <h3 className="alloc-name">{maskText(it.ccName || '', isPrivacyMode)} ({maskText(it.ccAcronym || '', isPrivacyMode)})</h3>
                 <p className="alloc-meta">
-                  Last Digits: {it.ccLastDigit || '—'}
+                  Last Digits: {isPrivacyMode ? '****' : (it.ccLastDigit || '—')}
                 </p>
               </div>
               <div className="alloc-date">
@@ -341,9 +346,11 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
         )}
       </main>
 
-      <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
-        <PlusIcon />
-      </button>
+      {!isPrivacyMode && (
+        <button className="fab-btn" onClick={() => setIsCreateModalOpen(true)}>
+          <PlusIcon />
+        </button>
+      )}
 
       {/* Detail Modal */}
       {isModalOpen && selectedItem && (
@@ -352,24 +359,26 @@ export default function CCDetails({ onBack, onNavigateToConnectedApps }: CCDetai
             <div className="alloc-detail-content">
               <div className="alloc-detail-header">
                 <div className="alloc-avatar large" style={{ backgroundColor: '#6366f1' }}>{getInitial(selectedItem.ccAcronym)}</div>
-                <h2>{selectedItem.ccName}</h2>
-                <p>{selectedItem.ccAcronym}</p>
+                <h2>{maskText(selectedItem.ccName || '', isPrivacyMode)}</h2>
+                <p>{maskText(selectedItem.ccAcronym || '', isPrivacyMode)}</p>
               </div>
               
               <div className="detail-grid">
-                <div className="detail-group"><label>Last Digits</label><p>{selectedItem.ccLastDigit}</p></div>
+                <div className="detail-group"><label>Last Digits</label><p>{isPrivacyMode ? '****' : selectedItem.ccLastDigit}</p></div>
                 <div className="detail-group"><label>Date Added</label><p>{selectedItem.dateAdded}</p></div>
                 <div className="detail-group"><label>Last Update</label><p>{selectedItem.updateDate || '—'}</p></div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
-                <button className="primary-btn" style={{ flex: 1 }} onClick={() => {
-                  setEditItem(selectedItem);
-                  setIsEditing(true);
-                  setIsModalOpen(false);
-                }}>Edit Card</button>
-                <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => setConfirmDialog({ type: 'delete', message: 'Are you sure you want to remove this credit card record? This action cannot be undone.', id: selectedItem.ccId })}>Remove</button>
-              </div>
+              {!isPrivacyMode && (
+                <div style={{ display: 'flex', gap: '12px', marginTop: '30px' }}>
+                  <button className="primary-btn" style={{ flex: 1 }} onClick={() => {
+                    setEditItem(selectedItem);
+                    setIsEditing(true);
+                    setIsModalOpen(false);
+                  }}>Edit Card</button>
+                  <button className="secondary-btn" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => setConfirmDialog({ type: 'delete', message: 'Are you sure you want to remove this credit card record? This action cannot be undone.', id: selectedItem.ccId })}>Remove</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
