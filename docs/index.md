@@ -28,3 +28,9 @@ The UI/Web App is designed to:
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
 - **Charts:** [Recharts](https://recharts.org/)
 - **Styling:** Vanilla CSS
+
+### 💡 Author's Note
+
+This project was developed as a showcase of **Generative AI, Prompt Engineering, and Agentic Development**. 
+
+While I possess basic knowledge of web technologies, I am not an expert in **React, TypeScript, or UI Design**. The entire codebase, for the Web Application, was architected and implemented using **Google Antigravity**. This project stands as a testament to the power of agentic AI in modern software development.
