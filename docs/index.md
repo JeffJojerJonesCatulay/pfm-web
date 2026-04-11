@@ -3,8 +3,7 @@
 This repository contains the **user interface (UI) and web application** for the Personal Finance Manager project.  
 It provides the frontend layer where users can interact with the system through a simple, intuitive dashboard.
 
-⚠️ **Note:** This is a **work in progress** and part of the larger Personal Finance Manager ecosystem.  
-It serves as the dedicated repository for the web application and user-facing components.
+✅ **Project Status:** Completed on **April 11, 2026**, but not limited for future enhancements, added features, and bug fixes.
 
 ## Overview
 
@@ -21,3 +20,11 @@ The UI/Web App is designed to:
 - **Pages** – Main views such as Dashboard, Budgets, Reports  
 - **Assets** – Stylesheets, images, and icons  
 - **Config** – Environment and API connection settings  
+
+## Tech Stack
+
+- **Framework:** [React 19](https://react.dev/)
+- **Build Tool:** [Vite](https://vitejs.dev/)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Charts:** [Recharts](https://recharts.org/)
+- **Styling:** Vanilla CSS
