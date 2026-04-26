@@ -126,9 +126,10 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle, isPrivacyM
   const fetchData = async (pageNumber = 0, ccRecId = selectedCycleId, filters = searchFilters) => {
     if (!ccRecId) return;
     setLoading(true);
+    let summaryPromise = null;
     if (pageNumber === 0) {
       setItems([]); 
-      fetchSummaryData(ccRecId);
+      summaryPromise = fetchSummaryData(ccRecId);
     }
     const token = await ensureFreshToken();
     if (!token) {
@@ -143,9 +144,15 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle, isPrivacyM
         url += `&expenseDescription=${filters.expenseDescription.replace(/ /g, '+')}`;
       }
 
-      const res = await fetch(url, {
+      const resPromise = fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      const [res] = await Promise.all([
+        resPromise,
+        summaryPromise ? summaryPromise : Promise.resolve()
+      ]);
+
       if (res.ok) {
         const json = await res.json();
         const payload = json.data || json;
@@ -227,7 +234,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle, isPrivacyM
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Record deleted.' });
         setIsDetailModalOpen(false);
-        fetchSummaryData(selectedCycleId!);
+        if (page !== 0) fetchSummaryData(selectedCycleId!);
         fetchData(page);
       } else { setResultDialog({ status: 'failed', message: 'Failed to delete.' }); }
     } catch (e) { setResultDialog({ status: 'failed', message: 'Network error.' }); }
@@ -269,7 +276,7 @@ export default function CCExpense({ onBack, onNavigateToBillingCycle, isPrivacyM
       if (res.ok) {
         setResultDialog({ status: 'success', message: 'Record updated!' });
         setIsEditing(false);
-        fetchSummaryData(selectedCycleId!);
+        if (page !== 0) fetchSummaryData(selectedCycleId!);
         fetchExpenseDetail(editExpense.ccExpId);
         fetchData(page);
       } else { setResultDialog({ status: 'failed', message: 'Update failed.' }); }
